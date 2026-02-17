@@ -1,19 +1,20 @@
+// app/_layout.tsx
 import React, { useEffect } from 'react';
-import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router'; // <--- 1. Import this
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Platform } from 'react-native';
+import { Platform, View, ActivityIndicator } from 'react-native'; // Import View & ActivityIndicator
 import * as NavigationBar from 'expo-navigation-bar';
 import * as SystemUI from 'expo-system-ui';
 import { Colors } from '@/constants/theme';
+import { useProtectedRoute } from '@/hooks/useProtectedRoute'; // Import the hook
 import { useAuthStore } from '@/store/useAuthStore';
 
 export default function RootLayout() {
-  const { isAuthenticated } = useAuthStore();
-  const segments = useSegments();
-  const router = useRouter();
+  // 1. Run the Protection Logic
+  useProtectedRoute();
   
-  // 2. Get the navigation state
-  const navigationState = useRootNavigationState();
+  // 2. Access hydration state for the UI
+  const { isHydrated } = useAuthStore();
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync("#0D0D0D");
@@ -23,37 +24,23 @@ export default function RootLayout() {
     }
   }, []);
 
- // 3. AUTH GATEKEEPER
-  useEffect(() => {
-    // A. Wait for the navigation tree to be fully initialized
-    if (!navigationState?.key) return;
+  // 3. SHOW A SPLASH/LOADING SCREEN while hydrating
+  // This is the "Slot" fix. Instead of returning null (which crashes Expo Router),
+  // we return a simple View. This gives Expo Router something to render
+  // while we wait for the store to be ready.
+  if (!isHydrated) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0D0D0D' }}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
-    const inAuthGroup = segments[0] === '(auth)';
-
-    // B. Wrap the redirect in a setTimeout to fix the "Before Mounting" error
-    // This pushes the navigation action to the NEXT "tick" of the event loop
-    const timer = setTimeout(() => {
-      if (!isAuthenticated && !inAuthGroup) {
-        // If NOT logged in, and trying to access the app -> Kick to Login
-        router.replace('/(auth)/login');
-      } else if (isAuthenticated && inAuthGroup) {
-        // If LOGGED IN, and trying to see login screen -> Send to Feed
-        router.replace('/(home)/feed');
-      }
-    }, 0); // 0ms delay is usually enough
-
-    // Cleanup the timer if the component unmounts quickly
-    return () => clearTimeout(timer);
-
-  }, [isAuthenticated, segments, navigationState?.key]);
-
-  // 5. IMPORTANT: Never return null here. 
-  // If you want a loading screen, return a View containing a <Slot/>, 
-  // but since you are using Stack, just returning the Stack is correct.
+  // 4. Render the App
   return (
     <>
       <StatusBar style="light" backgroundColor="#0D0D0D" />
-      <Stack screenOptions={{ headerShown: false, contentStyle:{backgroundColor:Colors.background} }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }}>
         <Stack.Screen name="(home)" />
         <Stack.Screen name="(auth)" />
       </Stack>
