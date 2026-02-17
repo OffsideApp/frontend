@@ -6,7 +6,7 @@ interface AuthState {
   user: any;
   isAuthenticated: boolean;
   isHydrated: boolean;
-  hasSeenOnboarding: boolean; // <--- 1. NEW FLAG
+  hasSeenOnboarding: boolean; 
   login: (user: any) => void;
   logout: () => void;
   setHydrated: () => void;
