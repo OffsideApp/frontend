@@ -26,7 +26,7 @@ export default function Splash() {
 
       if (isAuthenticated) {
         router.replace('/(home)/feed');
-      } else if (!hasSeenOnboarding) {
+      } else if (hasSeenOnboarding) {
         router.replace('/onboarding');
       } else {
         router.replace('/(auth)/login');

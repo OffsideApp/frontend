@@ -7,12 +7,14 @@ import {
   Image, 
   StyleSheet, 
   Dimensions, 
-  SafeAreaView 
+  SafeAreaView,
+  StatusBar as RNStatusBar
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Colors } from '@/constants/theme'; // Ensure this exists
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@/store/useAuthStore';
+import { Colors } from '@/constants/theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -26,96 +28,152 @@ export default function Onboarding() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
       
-      {/* 1. TOP IMAGE SECTION */}
-      <View style={styles.imageContainer}>
-        <Image 
-          source={require('../assets/images/icon.png')} // Or a dedicated illustration
-          style={styles.image} 
-        />
-      </View>
-
-      {/* 2. BOTTOM CONTENT SECTION */}
-      <View style={styles.contentContainer}>
-        <View>
-            <Text style={styles.title}>
-            Welcome to <Text style={styles.highlight}>Offside</Text>
-            </Text>
-            
-            <Text style={styles.subtitle}>
-            Connect with fans, follow your club, and never miss a match moment.
-            </Text>
+      {/* Background Image with Overlay */}
+      <Image
+        source={require('@/assets/images/stadium.jpg')} // You'll need a stadium background image
+        style={styles.backgroundImage}
+      />
+      
+      {/* Dark Overlay */}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.8)', '#000']}
+        style={styles.overlay}
+        locations={[0, 0.3, 0.7]}
+      />
+      
+      {/* Content */}
+      <SafeAreaView style={styles.content}>
+        {/* Top Section with SKIP */}
+        <View style={styles.topSection}>
+          <TouchableOpacity 
+            onPress={() => router.replace('/(auth)/login')}
+            style={styles.skipButton}
+          >
+            <Text style={styles.skipText}>SKIP</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity 
-          onPress={handleGetStarted}
-          activeOpacity={0.8}
-          style={styles.button}
-        >
-          <Text style={styles.buttonText}>Get Started</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+        {/* Main Content */}
+        <View style={styles.mainContent}>
+          <Text style={styles.title}>
+            Join the{' '}
+            <Text style={styles.warZone}>War Zone</Text>
+          </Text>
+          
+          <Text style={styles.description}>
+            The pitch is quiet, but the banter never stops. Clash with rivals in real-time.
+          </Text>
+        </View>
+
+        {/* Bottom Section with Button */}
+        <View style={styles.bottomSection}>
+          <TouchableOpacity 
+            onPress={handleGetStarted}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#CCFF00', '#CCFF00']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.button}
+            >
+              <Text style={styles.buttonText}>
+                Next Step <Text style={styles.arrow}>→</Text>
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0D0D0D',
+    backgroundColor: '#000',
   },
-  imageContainer: {
-    flex: 0.55, // Takes 55% of screen height
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 40,
+  backgroundImage: {
+    position: 'absolute',
+    width: width,
+    height: height,
+    resizeMode: 'cover',
   },
-  image: {
-    width: width * 0.8, // 80% of screen width
-    height: width * 0.8,
-    resizeMode: 'contain',
+  overlay: {
+    position: 'absolute',
+    width: width,
+    height: height,
   },
-  contentContainer: {
-    flex: 0.45, // Takes 45% of screen height
+  content: {
+    flex: 1,
+    paddingTop: RNStatusBar.currentHeight || 0,
+  },
+  topSection: {
     paddingHorizontal: 24,
-    justifyContent: 'space-between', // Pushes button to bottom
-    paddingBottom: 40, 
+    paddingTop: 20,
+    alignItems: 'flex-end',
+  },
+  skipButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  skipText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  mainContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems:'center',
+    paddingHorizontal: 24,
+    marginTop: -100, // Adjust based on your layout
   },
   title: {
-    fontSize: 32,
+    fontSize: 42,
     fontWeight: '800',
     color: '#FFFFFF',
-    textAlign: 'center',
     marginBottom: 16,
+    lineHeight: 52,
   },
-  highlight: {
-    color: Colors.primary || '#39FF14', // Neon Green
+  warZone: {
+    color: Colors.primary, // Orange/War zone color
+    textShadowColor: 'rgba(249, 115, 22, 0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#A1A1AA', // Light Gray
-    textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 20,
+  description: {
+    fontSize: 18,
+    color: 'rgba(255, 255, 255, 0.8)',
+    lineHeight: 28,
+    maxWidth: width * 0.85,
+  },
+  bottomSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 50,
   },
   button: {
-    backgroundColor: Colors.primary || '#39FF14',
-    height: 56,
-    borderRadius: 28, // Fully rounded
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
-    shadowColor: Colors.primary || '#39FF14',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowRadius: 15,
+    elevation: 8,
   },
   buttonText: {
-    color: '#000000',
+    color: Colors.background,
     fontSize: 18,
     fontWeight: '700',
+    letterSpacing: 1,
+  },
+  arrow: {
+    fontSize: 20,
+    fontWeight: '300',
   },
 });
