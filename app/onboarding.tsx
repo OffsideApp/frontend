@@ -1,151 +1,121 @@
+// app/onboarding.tsx
 import React from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Dimensions } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { COLORS } from '../theme/colors';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  Image, 
+  StyleSheet, 
+  Dimensions, 
+  SafeAreaView 
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { Colors } from '@/constants/theme'; // Ensure this exists
+import { useAuthStore } from '@/store/useAuthStore';
 
-const { height } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
-const OnboardingScreen = () => {
+export default function Onboarding() {
+  const router = useRouter();
+  const { completeOnboarding } = useAuthStore();
+
+  const handleGetStarted = () => {
+    completeOnboarding();
+    router.replace('/(auth)/login');
+  };
+
   return (
-    <View style={styles.container}>
-      {/* --- Background Image Section --- */}
-      <ImageBackground 
-        source={{ uri: 'https://images.unsplash.com/photo-1518605348400-43ded601201d?q=80&w=2500&auto=format&fit=crop' }} 
-        style={styles.imageBg}
-        resizeMode="cover"
-      >
-        {/* Gradient Fade to Black */}
-        <LinearGradient 
-          colors={['transparent', COLORS.background]} 
-          style={styles.gradient}
-          start={{x: 0, y: 0}} 
-          end={{x: 0, y: 1}}
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="light" />
+      
+      {/* 1. TOP IMAGE SECTION */}
+      <View style={styles.imageContainer}>
+        <Image 
+          source={require('../assets/images/icon.png')} // Or a dedicated illustration
+          style={styles.image} 
         />
-      </ImageBackground>
+      </View>
 
-      {/* --- Content Section --- */}
+      {/* 2. BOTTOM CONTENT SECTION */}
       <View style={styles.contentContainer}>
-        
-        {/* Skip Button */}
-        <TouchableOpacity style={styles.skipButton}>
-            <Text style={styles.skipText}>SKIP</Text>
-        </TouchableOpacity>
-
-        {/* Green Soccer Icon Circle */}
-        <View style={styles.iconCircle}>
-             <MaterialCommunityIcons name="soccer" size={32} color={COLORS.primary} />
+        <View>
+            <Text style={styles.title}>
+            Welcome to <Text style={styles.highlight}>Offside</Text>
+            </Text>
+            
+            <Text style={styles.subtitle}>
+            Connect with fans, follow your club, and never miss a match moment.
+            </Text>
         </View>
 
-        {/* Main Title */}
-        <Text style={styles.heading}>
-            Join the <Text style={{ color: COLORS.primary }}>War Zone</Text>
-        </Text>
-
-        <Text style={styles.description}>
-            The pitch is quiet, but the banter never stops. Clash with rivals in real-time.
-        </Text>
-
-        {/* Pagination Dots */}
-        <View style={styles.dotsContainer}>
-            <View style={[styles.dot, styles.activeDot]} />
-            <View style={styles.dot} />
-            <View style={styles.dot} />
-        </View>
-
-        {/* Action Button */}
-        <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>Next Step</Text>
-            <Ionicons name="arrow-forward" size={24} color="#000" />
+        <TouchableOpacity 
+          onPress={handleGetStarted}
+          activeOpacity={0.8}
+          style={styles.button}
+        >
+          <Text style={styles.buttonText}>Get Started</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#0D0D0D',
   },
-  imageBg: {
-    height: height * 0.55, // Takes top 55% of screen
-    width: '100%',
+  imageContainer: {
+    flex: 0.55, // Takes 55% of screen height
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 40,
   },
-  gradient: {
-    flex: 1,
-    // Gradient starts fading to black halfway down the image
-    top: '40%', 
+  image: {
+    width: width * 0.8, // 80% of screen width
+    height: width * 0.8,
+    resizeMode: 'contain',
   },
   contentContainer: {
-    flex: 1,
+    flex: 0.45, // Takes 45% of screen height
     paddingHorizontal: 24,
-    justifyContent: 'flex-end',
-    paddingBottom: 40,
+    justifyContent: 'space-between', // Pushes button to bottom
+    paddingBottom: 40, 
   },
-  skipButton: {
-    position: 'absolute',
-    top: -100, // Visual adjustment relative to content flow
-    right: 24,
-  },
-  skipText: {
-    color: COLORS.text.secondary,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  iconCircle: {
-    alignSelf: 'center',
-    backgroundColor: 'rgba(57, 255, 20, 0.1)', // Low opacity green
-    padding: 16,
-    borderRadius: 50,
-    marginBottom: 24,
-  },
-  heading: {
-    fontSize: 34,
+  title: {
+    fontSize: 32,
     fontWeight: '800',
-    color: COLORS.text.primary,
+    color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 16,
   },
-  description: {
-    color: COLORS.text.secondary,
-    textAlign: 'center',
+  highlight: {
+    color: Colors.primary || '#39FF14', // Neon Green
+  },
+  subtitle: {
     fontSize: 16,
+    color: '#A1A1AA', // Light Gray
+    textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 40,
-    paddingHorizontal: 10,
-  },
-  dotsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 30,
-    gap: 8,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.ui.barBg,
-  },
-  activeDot: {
-    width: 32,
-    backgroundColor: COLORS.primary,
+    paddingHorizontal: 20,
   },
   button: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 30,
-    flexDirection: 'row',
+    backgroundColor: Colors.primary || '#39FF14',
+    height: 56,
+    borderRadius: 28, // Fully rounded
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 10,
+    width: '100%',
+    shadowColor: Colors.primary || '#39FF14',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
   },
   buttonText: {
-    color: '#000',
-    fontWeight: '800',
+    color: '#000000',
     fontSize: 18,
+    fontWeight: '700',
   },
 });
-
-export default OnboardingScreen;
