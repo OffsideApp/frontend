@@ -9,22 +9,25 @@ const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
 
 export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
-  },
+  // Brand Identity
+  primary: '#CCFF00',  // The "Offside" Neon Green
+  background: '#0D0D0D', // Deep Black Background
+  
+  // UI Elements
+  card: '#1F1F1F',     // Slightly lighter black for Cards
+  border: 'rgba(255, 255, 255, 0.1)', // Thin borders
+  
+  // Text
+  text: '#FFFFFF',     // Main White Text
+  textMuted: '#A1A1A1', // Secondary Gray Text
+  
+  // Actions / States
+  redCard: '#FF3B30',  // Danger / Red Card
+  blue: '#0047AB',     // Link / Info (or Chelsea Blue)
+  success: '#34C759',  // Success Green
+  
+  // Tab Bar
+  tabInactive: '#555555',
 };
 
 export const Fonts = Platform.select({
