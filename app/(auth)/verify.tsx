@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useRef, useState } from "react";
 import { 
   View, 
   Text, 
@@ -7,27 +7,53 @@ import {
   TextInput, 
   KeyboardAvoidingView, 
   Platform, 
-  Pressable 
+  Pressable,
+  ActivityIndicator
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, ShieldCheck } from "lucide-react-native";
 import { Colors } from "@/constants/theme"; 
-import { useRouter } from "expo-router"; 
+import { useRouter, useLocalSearchParams } from "expo-router"; 
+
+// 1. Imports for Logic
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useAuthMutations } from "@/services/auth/auth.queries";
+
+// 2. Define Schema Locally (Simple enough)
+const verifySchema = z.object({
+  otp: z.string().length(6, "Please enter the full 6-digit code"),
+});
+
+type VerifyFormType = z.infer<typeof verifySchema>;
 
 export default function VerifyScreen() {
   const router = useRouter(); 
-  const [code, setCode] = useState("");
+  
+  // 3. Get Email from previous screen
+  const { email } = useLocalSearchParams<{ email: string }>();
+
+  // 4. Setup Mutation & Form
+  const { verifyMutation } = useAuthMutations();
   const inputRef = useRef<TextInput>(null);
+
+  const { control, handleSubmit, formState: { errors } } = useForm<VerifyFormType>({
+    resolver: zodResolver(verifySchema),
+    defaultValues: { otp: "" }
+  });
 
   const CODE_LENGTH = 6;
   const codeDigitsArray = new Array(CODE_LENGTH).fill(0);
 
-  const handleVerify = () => {
-    if (code.length === CODE_LENGTH) {
-      router.replace("/(auth)/select-club");
-    } else {
-      alert("Please enter the full 6-digit code");
+  // 5. Submit Handler
+  const onSubmit = (data: VerifyFormType) => {
+    if (!email) {
+        alert("Email missing! Please go back and signup again.");
+        return;
     }
+    // Call API
+    verifyMutation.mutate({ email, otp: data.otp });
   };
 
   const handleContainerPress = () => {
@@ -44,55 +70,83 @@ export default function VerifyScreen() {
 
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.replace("/(auth)/signup")}> 
+            <TouchableOpacity onPress={() => router.back()}> 
               <ArrowLeft color="white" size={24} />
             </TouchableOpacity>
           </View>
 
           {/* Middle Content - Centered */}
           <View style={styles.middle}>
+            
             {/* Title Section */}
             <View style={styles.titleSection}>
-              <Text style={styles.bigTitle}>Verify Your email</Text>
-              <Text style={styles.subtitle}>We sent a 6-digit code to your email</Text>
-              <Text style={styles.emailText}>player@offside.app</Text>
+              <Text style={styles.bigTitle}>Verify Your Email</Text>
+              <Text style={styles.subtitle}>We sent a 6-digit code to</Text>
+              <Text style={styles.emailText}>{email || "your email"}</Text>
             </View>
 
             {/* OTP Input Section */}
             <View style={styles.otpSection}>
-              <TextInput 
-                ref={inputRef}
-                value={code}
-                onChangeText={setCode}
-                maxLength={CODE_LENGTH}
-                keyboardType="number-pad"
-                returnKeyType="done"
-                style={styles.hiddenInput}
+              
+              {/* HIDDEN INPUT (Controlled by React Hook Form) */}
+              <Controller
+                control={control}
+                name="otp"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <>
+                    <TextInput 
+                      ref={inputRef}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      maxLength={CODE_LENGTH}
+                      keyboardType="number-pad"
+                      returnKeyType="done"
+                      style={styles.hiddenInput}
+                    />
+
+                    {/* VISUAL BOXES (Mapped to the hidden input value) */}
+                    <Pressable style={styles.otpContainer} onPress={handleContainerPress}>
+                      {codeDigitsArray.map((_, index) => {
+                        const digit = value ? value[index] : undefined;
+                        const isFocused = value ? index === value.length : index === 0; 
+                        
+                        return (
+                          <View 
+                            key={index} 
+                            style={[
+                              styles.otpBox, 
+                              isFocused && styles.otpBoxFocused,
+                              digit ? styles.otpBoxFilled : null,
+                              errors.otp && styles.otpBoxError // Red border on error
+                            ]}
+                          >
+                            <Text style={styles.otpText}>{digit || ""}</Text>
+                          </View>
+                        );
+                      })}
+                    </Pressable>
+                  </>
+                )}
               />
-              <Pressable style={styles.otpContainer} onPress={handleContainerPress}>
-                {codeDigitsArray.map((_, index) => {
-                  const digit = code[index];
-                  const isFocused = index === code.length; 
-                  return (
-                    <View 
-                      key={index} 
-                      style={[
-                        styles.otpBox, 
-                        isFocused && styles.otpBoxFocused,
-                        digit && styles.otpBoxFilled
-                      ]}
-                    >
-                      <Text style={styles.otpText}>{digit || "•"}</Text>
-                    </View>
-                  );
-                })}
-              </Pressable>
+              
+              {/* Error Message */}
+              {errors.otp && <Text style={styles.errorText}>{errors.otp.message}</Text>}
             </View>
 
             {/* Verify Button */}
-            <TouchableOpacity style={styles.verifyButton} onPress={handleVerify}>
-              <Text style={styles.verifyButtonText}>Verify</Text>
+            <TouchableOpacity 
+              style={[styles.verifyButton, verifyMutation.isPending && styles.verifyButtonDisabled]} 
+              onPress={handleSubmit(onSubmit)}
+              disabled={verifyMutation.isPending}
+            >
+              {verifyMutation.isPending ? (
+                 <ActivityIndicator color="black" />
+              ) : (
+                 <Text style={styles.verifyButtonText}>Verify Account</Text>
+              )}
             </TouchableOpacity>
+
           </View>
 
           {/* Footer & Secure Badge */}
@@ -121,26 +175,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#0D0D0D", 
   },
-
   wrapper: {
     flex: 1,
     paddingHorizontal: 20,
-    justifyContent: 'space-between', // Header top, middle center, footer bottom
+    justifyContent: 'space-between',
   },
-
   header: {
     paddingTop: 10,
   },
-
   middle: {
     flex: 1,
-    justifyContent: 'center', // Center middle content vertically
+    justifyContent: 'center',
   },
-
-  // Text Styles
   titleSection: {
     marginBottom: 40,
-    justifyContent:'center',
+    alignItems: 'center', // Centered text looks better for OTP screens
   },
   bigTitle: {
     color: "white",
@@ -160,11 +209,10 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textDecorationLine: 'underline',
   },
-
-  // OTP Styles
   otpSection: {
     marginBottom: 40,
     alignItems: 'center',
+    width: '100%',
   },
   hiddenInput: {
     position: 'absolute',
@@ -176,10 +224,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     width: '100%',
     justifyContent: 'space-between',
+    gap: 8, // Added gap for better spacing
   },
   otpBox: {
-    width: 45,
-    height: 55,
+    flex: 1, // Allow boxes to grow equally
+    aspectRatio: 0.8, // Maintain rectangular shape
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.1)",
@@ -194,13 +243,19 @@ const styles = StyleSheet.create({
   otpBoxFilled: {
     borderColor: "white",
   },
+  otpBoxError: {
+    borderColor: "#EF4444",
+  },
   otpText: {
-    fontSize: 20,
+    fontSize: 24,
     color: "white",
     fontWeight: "bold",
   },
-
-  // Button
+  errorText: {
+    color: "#EF4444",
+    fontSize: 14,
+    marginTop: 15,
+  },
   verifyButton: {
     backgroundColor: Colors.primary, 
     borderRadius: 30,
@@ -214,13 +269,14 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
+  verifyButtonDisabled: {
+    opacity: 0.7,
+  },
   verifyButtonText: {
     color: "#000",
     fontWeight: "bold",
     fontSize: 18,
   },
-
-  // Footer
   bottom: {
     flexShrink: 0,
     alignItems: 'center',
@@ -229,7 +285,7 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginBottom: 10,
+    marginBottom: 15,
   },
   footerText: {
     color: "#555",
@@ -240,8 +296,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 14,
   },
-  
-  // Secure Badge
   secureBadge: {
     flexDirection: 'row',
     alignItems: 'center',

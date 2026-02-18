@@ -8,44 +8,45 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert, // <--- Added for error messages
+  ActivityIndicator, // <--- For the loading spinner
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { Colors } from "@/constants/theme";
 import { useRouter } from "expo-router";
-// 1. Import the store
-import { useAuthStore } from "@/store/useAuthStore";
+
+// 1. Import Hook Form & Zod
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { LoginFormType, loginSchema } from "@/schema/auth.schema";
+import { useAuthMutations } from "@/services/auth/auth.queries";
 
 export default function LoginScreen() {
   const router = useRouter();
-  // 2. Get the login action from the store
-  const login = useAuthStore((state) => state.login);
-
   const [passwordVisible, setPasswordVisible] = useState(false);
   
-  // 3. State for inputs
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  // 3. Get the Login API Mutation
+  const { loginMutation } = useAuthMutations();
+
+  // 4. Setup Form
+  const { control, handleSubmit, formState: { errors } } = useForm<LoginFormType>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: ''
+    }
+  });
 
   const handleSignupNavigation = () => {
     router.replace("/(auth)/signup");
   };
 
-  // 4. The Login Logic
-  const handleLogin = () => {
-    if (!email || !password) {
-      Alert.alert("Offside", "Please enter your email and password to enter the pitch.");
-      return;
-    }
-
-    // Call the store action
-    login(email);
-    
-    // NOTE: We don't need to manually navigate here. 
-    // The listener in _layout.tsx will detect 'isAuthenticated: true' 
-    // and automatically move you to the Home feed.
+  // 5. The Submit Function
+  const onSubmit = (data: LoginFormType) => {
+    // This calls the API. The success logic (store update & navigation) 
+    // is handled inside 'services/auth.queries.ts'
+    loginMutation.mutate(data);
   };
 
   return (
@@ -54,105 +55,136 @@ export default function LoginScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()}>
-              <ArrowLeft color={Colors.primary} size={28} />
-            </TouchableOpacity>
-          </View>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          
+          {/* CENTER CONTAINER FOR TABLETS */}
+          <View style={styles.tabletContainer}>
 
-          {/* Hero Section */}
-          <View style={styles.heroSection}>
-            <Text style={styles.brandText}>OFFSIDE</Text>
-            <Text style={styles.tagline}>GET IN{"\n"}THE GAME</Text>
-          </View>
-
-          {/* Toggle Switch */}
-          <View style={styles.toggleContainer}>
-            <TouchableOpacity style={[styles.toggleButton, styles.activeToggle]}>
-              <Text style={[styles.toggleText, styles.activeToggleText]}>
-                Login
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.toggleButton}
-              onPress={handleSignupNavigation}
-            >
-              <Text style={styles.toggleText}>Signup</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Login Form */}
-          <View style={styles.form}>
-            <Text style={styles.label}>EMAIL ADDRESS</Text>
-            <View style={styles.inputContainer}>
-              <Mail color="#555" size={20} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="pitch@offside.com"
-                placeholderTextColor="#555"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                // 5. Bind state
-                value={email}
-                onChangeText={setEmail}
-              />
+            {/* Header */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => router.back()}>
+                <ArrowLeft color={Colors.primary} size={28} />
+              </TouchableOpacity>
             </View>
 
-            <Text style={styles.label}>PASSWORD</Text>
-            <View style={styles.inputContainer}>
-              <Lock color="#555" size={20} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="••••••••"
-                placeholderTextColor="#555"
-                secureTextEntry={!passwordVisible}
-                // 6. Bind state
-                value={password}
-                onChangeText={setPassword}
-              />
+            {/* Hero Section */}
+            <View style={styles.heroSection}>
+              <Text style={styles.brandText}>OFFSIDE</Text>
+              <Text style={styles.tagline}>GET IN{"\n"}THE GAME</Text>
+            </View>
+
+            {/* Toggle Switch */}
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity style={[styles.toggleButton, styles.activeToggle]}>
+                <Text style={[styles.toggleText, styles.activeToggleText]}>
+                  Login
+                </Text>
+              </TouchableOpacity>
+
               <TouchableOpacity
-                onPress={() => setPasswordVisible(!passwordVisible)}
+                style={styles.toggleButton}
+                onPress={handleSignupNavigation}
               >
-                {passwordVisible ? (
-                  <EyeOff color="#555" size={20} />
+                <Text style={styles.toggleText}>Signup</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Login Form */}
+            <View style={styles.form}>
+              
+              {/* --- EMAIL --- */}
+              <Text style={styles.label}>EMAIL ADDRESS</Text>
+              <Controller
+                control={control}
+                name="email"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <View style={[styles.inputContainer, errors.email && styles.inputError]}>
+                    <Mail color="#555" size={20} style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="pitch@offside.com"
+                      placeholderTextColor="#555"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      value={value}
+                    />
+                  </View>
+                )}
+              />
+              {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
+
+              {/* --- PASSWORD --- */}
+              <Text style={styles.label}>PASSWORD</Text>
+              <Controller
+                control={control}
+                name="password"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <View style={[styles.inputContainer, errors.password && styles.inputError]}>
+                    <Lock color="#555" size={20} style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="••••••••"
+                      placeholderTextColor="#555"
+                      secureTextEntry={!passwordVisible}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      value={value}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setPasswordVisible(!passwordVisible)}
+                    >
+                      {passwordVisible ? (
+                        <EyeOff color="#555" size={20} />
+                      ) : (
+                        <Eye color="#555" size={20} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+              {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
+
+              <TouchableOpacity style={styles.forgotPassword} onPress={() => router.push('/(auth)/forgot-password')}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+
+              {/* --- SUBMIT BUTTON --- */}
+              <TouchableOpacity
+                style={[styles.kickOffButton, loginMutation.isPending && styles.kickOffButtonDisabled]}
+                onPress={handleSubmit(onSubmit)}
+                disabled={loginMutation.isPending}
+              >
+                {loginMutation.isPending ? (
+                   <ActivityIndicator color="black" />
                 ) : (
-                  <Eye color="#555" size={20} />
+                  <>
+                    <FontAwesome5 name="futbol" size={24} color={Colors.background} />
+                    <Text style={styles.kickOffText}>KICK OFF</Text>
+                  </>
                 )}
               </TouchableOpacity>
-            </View>
 
-            <TouchableOpacity style={styles.forgotPassword} onPress={() => router.push('/(auth)/forgot-password')}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
+              {/* Divider */}
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>Or continue with</Text>
+                <View style={styles.dividerLine} />
+              </View>
 
-            <TouchableOpacity
-              style={styles.kickOffButton}
-              onPress={handleLogin} // <--- Call the new handler
-            >
-              <FontAwesome5 name="futbol" size={24} color={Colors.background} />
-              <Text style={styles.kickOffText}>KICK OFF</Text>
-            </TouchableOpacity>
-
-            {/* Divider */}
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>Or continue with</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <TouchableOpacity style={styles.socialButton}>
-              <Text style={styles.socialText}>G Google</Text>
-            </TouchableOpacity>
-
-            {/* Footer */}
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>New to the league? </Text>
-              <TouchableOpacity onPress={handleSignupNavigation}>
-                <Text style={styles.createAccountText}>Create an account</Text>
+              <TouchableOpacity style={styles.socialButton}>
+                <Text style={styles.socialText}>G Google</Text>
               </TouchableOpacity>
+
+              {/* Footer */}
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>New to the league? </Text>
+                <TouchableOpacity onPress={handleSignupNavigation}>
+                  <Text style={styles.createAccountText}>Create an account</Text>
+                </TouchableOpacity>
+              </View>
+
             </View>
           </View>
         </ScrollView>
@@ -163,7 +195,12 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0D0D0D" },
-  scrollContent: { paddingTop: 50 },
+  scrollContent: { paddingTop: 50, paddingBottom: 50 },
+  tabletContainer: {
+    width: '100%',
+    maxWidth: 500,
+    alignSelf: 'center',
+  },
   header: {
     paddingHorizontal: 20,
     paddingTop: 10,
@@ -219,10 +256,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     height: 56,
-    marginBottom: 5,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  inputError: {
+    borderColor: "#EF4444",
   },
   inputIcon: { marginRight: 12 },
   input: { flex: 1, color: "white", fontSize: 16, height: "100%" },
+  errorText: {
+    color: "#EF4444",
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
+  },
   forgotPassword: { alignSelf: "flex-end", marginTop: 10, marginBottom: 20 },
   forgotPasswordText: { color: "#A1A1A1", fontSize: 14 },
   kickOffButton: {
@@ -234,11 +281,14 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 0 },
     flexDirection: "row",
-    gap: 5,
+    gap: 10,
     shadowOpacity: 0.6,
     shadowRadius: 15,
     elevation: 10,
     marginBottom: 30,
+  },
+  kickOffButtonDisabled: {
+    opacity: 0.7,
   },
   kickOffText: {
     color: "black",

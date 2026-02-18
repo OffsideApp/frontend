@@ -1,4 +1,4 @@
-import React, { useState,  } from "react";
+import React, { useState } from "react";
 import { 
   View, 
   Text, 
@@ -7,16 +7,38 @@ import {
   TextInput, 
   KeyboardAvoidingView, 
   Platform, 
-  ScrollView 
+  ScrollView,
+  ActivityIndicator 
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react-native";
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Colors } from "@/constants/theme"; 
 import { useRouter } from "expo-router"; 
+import { SignupFormType, signupSchema } from "@/schema/auth.schema"; // Ensure this file exists
+import { useAuthMutations } from '../../services/auth/auth.queries';
 
 export default function SignupScreen() {
+  const { registerMutation } = useAuthMutations();
   const router = useRouter(); 
   const [passwordVisible, setPasswordVisible] = useState(false);
+
+  // 1. Setup Form with Zod Validation
+  const { control, handleSubmit, formState: { errors } } = useForm<SignupFormType>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: ''
+    }
+  });
+
+  // 2. Submit Handler
+  const onSubmit = (data: SignupFormType) => {
+    registerMutation.mutate(data);
+  };
 
   const handleLoginNavigation = () => {
     router.replace("/(auth)/login");
@@ -28,11 +50,12 @@ export default function SignupScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"} 
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           
-          {/* FIX 3: Add a "Center Container" to stop it stretching on Tablets */}
-          {/* <View style={styles.tabletContainer}> */}
+          {/* CENTER CONTAINER (Keeps layout clean on Tablets) */}
+          <View style={styles.tabletContainer}>
 
+            {/* HEADER */}
             <View style={styles.header}>
               <TouchableOpacity onPress={handleLoginNavigation}> 
                  <ArrowLeft color="white" size={24} />
@@ -41,63 +64,118 @@ export default function SignupScreen() {
               <View style={{width: 24}} />
             </View>
 
+            {/* TITLE */}
             <View style={styles.titleSection}>
               <Text style={styles.bigTitle}>Join the Game</Text>
               <Text style={styles.subtitle}>Create your account to get started.</Text>
             </View>
 
+            {/* FORM */}
             <View style={styles.form}>
               
-              <Text style={styles.label}>Full Name</Text>
-              <View style={styles.inputContainer}>
-                <TextInput 
-                  style={styles.input}
-                  placeholder="John Doe"
-                  placeholderTextColor="#555"
-                />
-              </View>
+              {/* --- FIRST NAME --- */}
+              <Text style={styles.label}>First Name</Text>
+              <Controller
+                control={control}
+                name="firstName"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <View style={[styles.inputContainer, errors.firstName && styles.inputError]}>
+                    <TextInput 
+                      style={styles.input}
+                      placeholder="Jay-Jay"
+                      placeholderTextColor="#555"
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      value={value}
+                    />
+                  </View>
+                )}
+              />
+              {errors.firstName && <Text style={styles.errorText}>{errors.firstName.message}</Text>}
 
+              {/* --- LAST NAME --- */}
+              <Text style={styles.label}>Last Name</Text>
+              <Controller
+                control={control}
+                name="lastName"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <View style={[styles.inputContainer, errors.lastName && styles.inputError]}>
+                    <TextInput 
+                      style={styles.input}
+                      placeholder="Okocha"
+                      placeholderTextColor="#555"
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      value={value}
+                    />
+                  </View>
+                )}
+              />
+              {errors.lastName && <Text style={styles.errorText}>{errors.lastName.message}</Text>}
+
+              {/* --- EMAIL --- */}
               <Text style={styles.label}>Email Address</Text>
-              <View style={styles.inputContainer}>
-                <TextInput 
-                  style={styles.input}
-                  placeholder="john@example.com"
-                  placeholderTextColor="#555"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
+              <Controller
+                control={control}
+                name="email"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <View style={[styles.inputContainer, errors.email && styles.inputError]}>
+                    <TextInput 
+                      style={styles.input}
+                      placeholder="jayjay@offside.com"
+                      placeholderTextColor="#555"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      value={value}
+                    />
+                  </View>
+                )}
+              />
+              {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
 
-              <Text style={styles.label}>Username</Text>
-              <View style={styles.inputContainer}>
-                <TextInput 
-                  style={styles.input}
-                  placeholder="johndoe_offside"
-                  placeholderTextColor="#555"
-                  autoCapitalize="none"
-                />
-              </View>
-
+              {/* --- PASSWORD --- */}
               <Text style={styles.label}>Password</Text>
-              <View style={styles.inputContainer}>
-                <TextInput 
-                  style={styles.input}
-                  placeholder="••••••••"
-                  placeholderTextColor="#555"
-                  secureTextEntry={!passwordVisible}
-                />
-                <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
-                  {passwordVisible ? 
-                    <EyeOff color={Colors.primary} size={20} /> : 
-                    <Eye color={Colors.primary} size={20} />
-                  }
-                </TouchableOpacity>
-              </View>
+              <Controller
+                control={control}
+                name="password"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <View style={[styles.inputContainer, errors.password && styles.inputError]}>
+                    <TextInput 
+                      style={styles.input}
+                      placeholder="••••••••"
+                      placeholderTextColor="#555"
+                      secureTextEntry={!passwordVisible}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      value={value}
+                    />
+                    <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
+                      {passwordVisible ? 
+                        <EyeOff color={Colors.primary} size={20} /> : 
+                        <Eye color={Colors.primary} size={20} />
+                      }
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+              {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
 
-              <TouchableOpacity style={styles.createButton} onPress={() => router.replace("/(auth)/verify")}>
-                <Text style={styles.createButtonText}>Create Account</Text>
+              {/* --- SUBMIT BUTTON --- */}
+              <TouchableOpacity 
+                style={[styles.createButton, registerMutation.isPending && styles.createButtonDisabled]} 
+                onPress={handleSubmit(onSubmit)}
+                disabled={registerMutation.isPending}
+              >
+                {registerMutation.isPending ? (
+                  <ActivityIndicator color="black" />
+                ) : (
+                  <Text style={styles.createButtonText}>Create Account</Text>
+                )}
               </TouchableOpacity>
 
+              {/* --- SOCIALS --- */}
               <View style={styles.dividerContainer}>
                 <View style={styles.dividerLine} />
                 <Text style={styles.dividerText}>Or continue with</Text>
@@ -122,7 +200,7 @@ export default function SignupScreen() {
               </View>
 
             </View>
-          {/* </View> */}
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -135,20 +213,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#0D0D0D", 
   },
   scrollContent: {
-    paddingBottom: 100, // FIX 4: Huge padding at bottom so floating icons don't cover text
+    paddingBottom: 50,
+    flexGrow: 1,
   },
-  // FIX 5: The Magic Tablet Style
   tabletContainer: {
     width: '100%',
-    maxWidth: 500, // Stretches on Phone, stops at 500px on Tablet
-    alignSelf: 'center', // Centers it in the middle of the big screen
+    maxWidth: 500, 
+    alignSelf: 'center', 
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: 30, // Adjusted for SafeArea
     marginBottom: 20,
   },
   headerTitle: {
@@ -159,7 +237,7 @@ const styles = StyleSheet.create({
   titleSection: {
     paddingHorizontal: 20,
     marginBottom: 30,
-    alignItems:"center",
+    alignItems: "center",
   },
   bigTitle: {
     color: "white",
@@ -170,6 +248,7 @@ const styles = StyleSheet.create({
   subtitle: {
     color: "#A1A1A1", 
     fontSize: 16,
+    textAlign: "center",
   },
   form: {
     paddingHorizontal: 20,
@@ -177,11 +256,11 @@ const styles = StyleSheet.create({
   label: {
     color: "#A1A1A1",
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: "600",
     marginBottom: 8,
     marginTop: 10,
-    textTransform:"uppercase",
-     letterSpacing: 1,
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   inputContainer: {
     backgroundColor: "#1F1F1F", 
@@ -190,15 +269,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     height: 56,
-    marginBottom: 5,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.05)",
+  },
+  inputError: {
+    borderColor: "#EF4444", // Red border on error
   },
   input: {
     flex: 1,
     color: "white",
     fontSize: 16,
     height: "100%",
+  },
+  errorText: {
+    color: "#EF4444",
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
   },
   createButton: {
     backgroundColor: Colors.primary, 
@@ -213,6 +300,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 5,
+  },
+  createButtonDisabled: {
+    opacity: 0.7, // Dim button when loading
   },
   createButtonText: {
     color: "#000",
