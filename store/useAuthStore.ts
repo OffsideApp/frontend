@@ -10,7 +10,7 @@ interface AuthState {
   login: (user: any) => void;
   logout: () => void;
   setHydrated: () => void;
-  completeOnboarding: () => void; // <--- 2. NEW ACTION
+  completeOnboarding: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -19,12 +19,12 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isHydrated: false,
-      hasSeenOnboarding: false, // Default is false
+      hasSeenOnboarding: false, 
 
       login: (user) => set({ user, isAuthenticated: true }),
       logout: () => set({ user: null, isAuthenticated: false }),
       setHydrated: () => set({ isHydrated: true }),
-      completeOnboarding: () => set({ hasSeenOnboarding: true }), // Mark as seen
+      completeOnboarding: () => set({ hasSeenOnboarding: true }), 
     }),
     {
       name: 'auth-storage',
