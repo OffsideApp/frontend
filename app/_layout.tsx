@@ -9,11 +9,13 @@ import { Colors } from "@/constants/theme";
 import { useAuthStore } from "@/store/useAuthStore";
 import "../global.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
   const { isHydrated } = useAuthStore();
+  useProtectedRoute();
 
   useEffect(() => {
     // 1. Set System UI to Dark Mode

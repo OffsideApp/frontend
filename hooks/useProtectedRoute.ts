@@ -1,32 +1,55 @@
 // hooks/useProtectedRoute.ts
 import { useEffect } from 'react';
-import { useRouter, useSegments, useRootNavigationState } from 'expo-router';
+import { useRouter, useSegments, useRootNavigationState, usePathname } from 'expo-router';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export function useProtectedRoute() {
   const segments = useSegments();
+  const pathname = usePathname(); 
   const router = useRouter();
   const navigationState = useRootNavigationState();
   
-  const { isAuthenticated, isHydrated } = useAuthStore();
+  const { isAuthenticated, isHydrated, user, hasSeenOnboarding } = useAuthStore();
 
   useEffect(() => {
-    // 1. If navigation isn't ready, do nothing.
-    // The "key" property is only present when the RootNavigator is mounted.
-    if (!navigationState?.key) return;
+    // 1. Wait for navigation and storage to be ready
+    if (!navigationState?.key || !isHydrated) return;
 
-    // 2. If the store is still loading from disk, do nothing.
-    // This prevents the "Flash of Login" and premature redirects.
-    if (!isHydrated) return;
+    // 2. Ignore Splash Screen
+    if (pathname === '/') return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inOnboarding = segments[0] === 'onboarding';
 
-    if (!isAuthenticated && !inAuthGroup) {
-      // Redirect to login only if we are SURE they are not authenticated
-      router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup) {
-      // Redirect to home if they are logged in and trying to login
-      router.replace('/(home)/feed');
+    // 3. 🛑 NOT LOGGED IN LOGIC
+    if (!isAuthenticated) {
+      if (!hasSeenOnboarding && !inOnboarding) {
+        router.replace('/onboarding');
+      } else if (hasSeenOnboarding && !inAuthGroup) {
+        router.replace('/(auth)/login');
+      }
+      return; // Stop running here
     }
-  }, [isAuthenticated, isHydrated, segments, navigationState?.key]);
+
+    // 4. ✅ LOGGED IN LOGIC
+    if (isAuthenticated && user) {
+      const isMissingProfile = !user.hasUsername || !user.hasSelectedClub;
+      const isOnSelectClubScreen = segments[1] === 'select-club';
+
+      // A. If they are incomplete
+      if (isMissingProfile) {
+        if (!isOnSelectClubScreen) {
+          // Send them to setup if they aren't already there
+          router.replace('/(auth)/select-club');
+        }
+        // 🚨 CRITICAL FIX: Always return here so they stay trapped on the setup screen!
+        return; 
+      }
+
+      // B. If they are completely setup, but trying to sneak back to Auth/Onboarding
+      if (inAuthGroup || inOnboarding) {
+        router.replace('/(home)/feed');
+      }
+    }
+  }, [isAuthenticated, isHydrated, segments, pathname, navigationState?.key, user, hasSeenOnboarding]);
 }

@@ -7,48 +7,48 @@ import { Colors } from '@/constants/theme';
 
 export default function Splash() {
   const router = useRouter();
-  const { isHydrated, isAuthenticated, hasSeenOnboarding } = useAuthStore();
+  // 👇 Added user here to check status
+  const { isHydrated, isAuthenticated, hasSeenOnboarding, user } = useAuthStore(); 
   
-  // Animation Value
   const fadeAnim = new Animated.Value(0);
 
   useEffect(() => {
-    // Fade In Animation
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 1000,
       useNativeDriver: true,
     }).start();
 
-    // Navigation Logic
     const navigate = () => {
-      if (!isHydrated) return; // Wait for store
+      if (!isHydrated) return;
 
-      if (isAuthenticated) {
-        router.replace('/(home)/feed');
+      if (isAuthenticated && user) {
+        // 👇 ADDED: Traffic Control for Initial App Open
+        if (!user.hasUsername) {
+          router.replace('/(auth)/select-club'); // Change to set-profile later
+        } else if (!user.hasSelectedClub) {
+          router.replace('/(auth)/select-club');
+        } else {
+          router.replace('/(home)/feed');
+        }
       } else if (hasSeenOnboarding) {
-        router.replace('/onboarding');
+        router.replace('/(auth)/login'); // Used to say onboarding, fixed it.
       } else {
-        router.replace('/(auth)/login');
+        router.replace('/onboarding'); // Used to say login, fixed it.
       }
     };
 
-    // Wait 2 seconds for the splash effect, then navigate
     const timer = setTimeout(navigate, 2000);
-
     return () => clearTimeout(timer);
-  }, [isHydrated, isAuthenticated, hasSeenOnboarding]);
+  }, [isHydrated, isAuthenticated, hasSeenOnboarding, user]);
 
   return (
     <View style={styles.container}>
       <Animated.View style={{ opacity: fadeAnim, alignItems: 'center' }}>
-        {/* YOUR LOGO */}
         <Image 
           source={require('../assets/images/splash-icon.png')} 
           style={styles.logo}
         />
-        
-        {/* OPTIONAL: Loading Spinner below logo */}
         <View style={{ marginTop: 50 }}>
              <ActivityIndicator size="large" color={Colors.primary || "#39FF14"} />
         </View>
@@ -58,15 +58,6 @@ export default function Splash() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0D0D0D', // Matches Splash Background
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logo: {
-    width: 180,
-    height: 180,
-    resizeMode: 'contain',
-  },
+  container: { flex: 1, backgroundColor: '#0D0D0D', alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 180, height: 180, resizeMode: 'contain' },
 });
