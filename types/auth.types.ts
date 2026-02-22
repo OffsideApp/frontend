@@ -18,6 +18,11 @@ export interface LoginDto {
   password: string;
 }
 
+export interface selectClubDto{
+  userId: string
+  clubName: string
+}
+
 // --- RESPONSES ---
 export interface AuthResponse<T = any> {
   success: boolean;

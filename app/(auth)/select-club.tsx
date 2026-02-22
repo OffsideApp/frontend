@@ -15,19 +15,10 @@ import { ArrowLeft, Search, Check, Zap, RotateCw } from "lucide-react-native";
 import { Colors } from "@/constants/theme"; 
 import { useRouter } from "expo-router";
 import StickyFooter from "@/components/StickyFooter";
-
-const CLUBS = [
-  { id: '1', name: 'Arsenal', color: '#EF0107', initials: 'AR' },
-  { id: '2', name: 'Chelsea', color: '#034694', initials: 'CH' },
-  { id: '3', name: 'Man Utd', color: '#DA291C', initials: 'MU' },
-  { id: '4', name: 'Liverpool', color: '#C8102E', initials: 'LI' },
-  { id: '5', name: 'Man City', color: '#6CABDD', initials: 'MC' },
-  { id: '6', name: 'Spurs', color: '#132257', initials: 'SP' },
-  { id: '7', name: 'Aston Villa', color: '#95BWE5', initials: 'AV' },
-  { id: '8', name: 'Newcastle', color: '#241F20', initials: 'NE' },
-  { id: '9', name: 'West Ham', color: '#7A263A', initials: 'WH' },
-];
-
+import { Image } from 'expo-image';
+import { CLUBS
+  
+ } from "@/constants/clubs";
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const COLUMN_COUNT = 3;
 const ITEM_SIZE = (SCREEN_WIDTH - 48) / COLUMN_COUNT; // 48 = padding (20*2) + gap (8)
@@ -43,15 +34,13 @@ export default function SelectClubScreen() {
     }
   };
 
-  const renderClub = ({ item }: { item: any }) => {
+  const renderClub = ({ item }: { item: typeof CLUBS[0] }) => {
     const isSelected = selectedClub === item.id;
 
     return (
       <TouchableOpacity 
         style={styles.clubItemContainer} 
-        onPress={() => {
-            setSelectedClub(item.id);
-        }}
+        onPress={() => setSelectedClub(item.id)}
         activeOpacity={0.8}
       >
         <View style={[styles.clubCard, isSelected && styles.clubCardSelected]}>
@@ -60,10 +49,14 @@ export default function SelectClubScreen() {
               <Check size={10} color="black" strokeWidth={4} />
             </View>
           )}
-          {/* Circular Logo Placeholder */}
-          <View style={[styles.placeholderLogo, { backgroundColor: item.color }]}>
-            <Text style={styles.initials}>{item.initials}</Text>
-          </View>
+          
+          {/* 👇 THE NEW ACTUAL LOGO 👇 */}
+          <Image 
+            source={{ uri: item.logo }} 
+            style={styles.clubLogo} 
+            contentFit="contain"
+            transition={200} // Smooth fade-in
+          />
         </View>
         
         <Text style={[styles.clubName, isSelected && styles.clubNameSelected]}>
@@ -260,6 +253,10 @@ const styles = StyleSheet.create({
     color: 'white', 
     fontWeight: 'bold', 
     fontSize: 14 
+  },
+  clubLogo: {
+    width: 48,
+    height: 48,
   },
   clubName: { 
     color: '#555', 

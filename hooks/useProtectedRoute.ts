@@ -48,7 +48,7 @@ export function useProtectedRoute() {
 
       // B. If they are completely setup, but trying to sneak back to Auth/Onboarding
       if (inAuthGroup || inOnboarding) {
-        router.replace('/(home)/feed');
+        router.replace('/(home)/feed'); 
       }
     }
   }, [isAuthenticated, isHydrated, segments, pathname, navigationState?.key, user, hasSeenOnboarding]);

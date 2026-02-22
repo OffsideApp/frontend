@@ -6,11 +6,11 @@ import {
   VerifyEmailDto, 
   AuthResponse, 
   LoginResponse, 
-  RegisterResponse 
+  RegisterResponse, 
+  selectClubDto
 } from '../../types/auth.types';
 
 export const AuthService = {
-  
   register: async (data: RegisterDto) => {
     const response = await api.post<AuthResponse<RegisterResponse>>('/auth/register', data);
     return response.data;
@@ -25,4 +25,8 @@ export const AuthService = {
     const response = await api.post<AuthResponse<LoginResponse>>('/auth/login', data);
     return response.data;
   },
+  selectClub: async (data: selectClubDto) => {
+    const response = await api.post<AuthResponse>('/auth/select-club', data);
+    return response.data
+  }
 };
