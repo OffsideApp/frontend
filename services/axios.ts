@@ -20,6 +20,7 @@ api.interceptors.request.use(
   async (config) => {
     // We access the token directly from Zustand state (outside hooks)
     const token = useAuthStore.getState().accessToken;
+    console.log("🔐 Token being sent:", token ? "YES (Token exists)" : "NO (Token is null)");
     
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -34,6 +35,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     // If 401 Unauthorized, we might want to logout
+    console.log("❌ BACKEND REJECTION REASON:", error.response?.data);
     if (error.response?.status === 401) {
       // For now, just log it. We will add Refresh Logic later.
       console.log('Session expired or unauthorized');

@@ -17,6 +17,7 @@ interface AuthState {
   logout: () => void;
   completeOnboarding: () => void;
   setHydrated: () => void; // 👈 RESTORED
+  updateUser: (updates: Partial<LoginResponse>) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -45,6 +46,10 @@ export const useAuthStore = create<AuthState>()(
 
       completeOnboarding: () => set({ hasSeenOnboarding: true }),
       setHydrated: () => set({ isHydrated: true }), // 👈 Action to flip it
+
+      updateUser: (updates) => set((state) => ({
+        user: state.user ? { ...state.user, ...updates } : null
+      })),
     }),
     {
       name: 'offside-auth-storage',

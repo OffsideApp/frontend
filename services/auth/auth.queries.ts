@@ -8,7 +8,7 @@ import { ApiError } from '../../types/auth.types';
 
 export const useAuthMutations = () => {
   const router = useRouter();
-  const { login } = useAuthStore();
+  const { login, updateUser } = useAuthStore();
 
   // 1. REGISTER HOOK
   const registerMutation = useMutation({
@@ -65,5 +65,17 @@ export const useAuthMutations = () => {
     }
   });
 
-  return { registerMutation, verifyMutation, loginMutation };
+  const selectClubMutation = useMutation({
+    mutationFn: AuthService.selectClub,
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || "Failed to save club";
+      Alert.alert("Error", msg);
+    },
+    onSuccess: () => {
+      // Tell Zustand the club is saved. The Route Guard handles the navigation!
+      updateUser({ hasSelectedClub: true });
+    }
+  });
+
+  return { registerMutation, verifyMutation, loginMutation, selectClubMutation };
 };

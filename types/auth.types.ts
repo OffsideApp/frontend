@@ -19,7 +19,6 @@ export interface LoginDto {
 }
 
 export interface selectClubDto{
-  userId: string
   clubName: string
 }
 
