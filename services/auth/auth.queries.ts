@@ -74,8 +74,25 @@ export const useAuthMutations = () => {
     onSuccess: () => {
       // Tell Zustand the club is saved. The Route Guard handles the navigation!
       updateUser({ hasSelectedClub: true });
+      
     }
   });
 
-  return { registerMutation, verifyMutation, loginMutation, selectClubMutation };
+  const setProfileMutation = useMutation({
+    mutationFn: AuthService.setProfile,
+    onError: (error: any) => {
+      // If the backend says the username is taken, it will show here!
+      const msg = error.response?.data?.message || "Failed to set profile";
+      Alert.alert("Error", msg);
+    },
+    onSuccess: () => {
+      // 🚀 THE MAGIC: Tell Zustand the user now has a username!
+      // The Route Guard will instantly push them to Select Club.
+      if (updateUser) {
+         updateUser({ hasUsername: true });
+      }
+    }
+  });
+
+  return { registerMutation, verifyMutation, loginMutation, selectClubMutation, setProfileMutation };
 };

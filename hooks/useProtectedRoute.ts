@@ -33,22 +33,28 @@ export function useProtectedRoute() {
 
     // 4. ✅ LOGGED IN LOGIC
     if (isAuthenticated && user) {
-      const isMissingProfile = !user.hasUsername || !user.hasSelectedClub;
-      const isOnSelectClubScreen = segments[1] === 'select-club';
+      const isOnSelectClub = segments[1] === 'select-club';
+      const isOnSetProfile = segments[1] === 'set-profile';
 
-      // A. If they are incomplete
-      if (isMissingProfile) {
-        if (!isOnSelectClubScreen) {
-          // Send them to setup if they aren't already there
+      // STEP 1: If they haven't picked a club, lock them on select-club
+      if (!user.hasSelectedClub) {
+        if (!isOnSelectClub) {
           router.replace('/(auth)/select-club');
         }
-        // 🚨 CRITICAL FIX: Always return here so they stay trapped on the setup screen!
-        return; 
+        return; // 🛑 Stop here until they pick a club
       }
 
-      // B. If they are completely setup, but trying to sneak back to Auth/Onboarding
+      // STEP 2: If they have a club but NO username, lock them on set-profile
+      if (!user.hasUsername) {
+        if (!isOnSetProfile) {
+          router.replace('/(auth)/set-profile');
+        }
+        return; // 🛑 Stop here until they set a username
+      }
+
+      // STEP 3: Fully setup! If they try to go back to Login/Signup, push them to Feed
       if (inAuthGroup || inOnboarding) {
-        router.replace('/(home)/feed'); 
+        router.replace('/(home)/feed');
       }
     }
   }, [isAuthenticated, isHydrated, segments, pathname, navigationState?.key, user, hasSeenOnboarding]);

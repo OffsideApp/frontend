@@ -15,6 +15,20 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+export const setProfileSchema = z.object({
+  username: z
+    .string()
+    .min(3, "Username must be at least 3 characters")
+    .max(20, "Username is too long")
+    .trim()
+    .regex(/^[a-zA-Z0-9]+$/, "Only letters and numbers allowed. No spaces or symbols!"),
+  bio: z
+    .string()
+    .max(160, "Bio cannot exceed 160 characters")
+    .optional(),
+});
+
 // Export the "Types" automatically generated from the rules
 export type SignupFormType = z.infer<typeof signupSchema>;
 export type LoginFormType = z.infer<typeof loginSchema>;
+export type setProfileType = z.infer<typeof setProfileSchema>

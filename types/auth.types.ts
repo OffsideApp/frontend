@@ -22,6 +22,11 @@ export interface selectClubDto{
   clubName: string
 }
 
+export interface SetProfileDto {
+  username: string;
+  bio?:     string;
+}
+
 // --- RESPONSES ---
 export interface AuthResponse<T = any> {
   success: boolean;

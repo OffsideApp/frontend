@@ -7,7 +7,8 @@ import {
   AuthResponse, 
   LoginResponse, 
   RegisterResponse, 
-  selectClubDto
+  selectClubDto,
+  SetProfileDto
 } from '../../types/auth.types';
 
 export const AuthService = {
@@ -28,5 +29,9 @@ export const AuthService = {
   selectClub: async (data: selectClubDto) => {
     const response = await api.post<AuthResponse>('/auth/select-club', data);
     return response.data
-  }
+  },
+  setProfile: async (data: SetProfileDto ) => {
+    const response = await api.post<AuthResponse>('/auth/set-profile', data);
+    return response.data;
+  },
 };
