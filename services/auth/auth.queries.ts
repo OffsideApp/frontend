@@ -74,6 +74,7 @@ export const useAuthMutations = () => {
     onSuccess: () => {
       // Tell Zustand the club is saved. The Route Guard handles the navigation!
       updateUser({ hasSelectedClub: true });
+      router.replace("/(auth)/set-profile")
       
     }
   });

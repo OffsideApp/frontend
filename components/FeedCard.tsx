@@ -1,3 +1,4 @@
+// components/FeedCard.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Play, Heart, MessageSquare, AlertOctagon } from 'lucide-react-native';
@@ -7,9 +8,18 @@ type FeedCardProps = {
   club: string;
   content: string;
   time: string;
+  hasAudio?: boolean; // Optional prop for voice rants
+  audioDuration?: string; // Optional prop for voice rant length
 };
 
-export default function FeedCard({ username, club, content, time }: FeedCardProps) {
+export default function FeedCard({ 
+  username, 
+  club, 
+  content, 
+  time, 
+  hasAudio, 
+  audioDuration 
+}: FeedCardProps) {
   return (
     <View style={styles.card}>
       {/* Header: Avatar + Name + Time */}
@@ -32,14 +42,16 @@ export default function FeedCard({ username, club, content, time }: FeedCardProp
       {/* The Rant Text */}
       <Text style={styles.content}>{content}</Text>
 
-      {/* The Audio Player */}
-      <TouchableOpacity style={styles.audioPlayer}>
-        <View style={styles.playButton}>
-          <Play size={14} color="black" fill="black" />
-        </View>
-        <View style={styles.waveform} />
-        <Text style={styles.duration}>0:34</Text>
-      </TouchableOpacity>
+      {/* Conditionally render The Audio Player ONLY if hasAudio is true */}
+      {hasAudio && (
+        <TouchableOpacity style={styles.audioPlayer}>
+          <View style={styles.playButton}>
+            <Play size={14} color="black" fill="black" />
+          </View>
+          <View style={styles.waveform} />
+          <Text style={styles.duration}>{audioDuration || "0:00"}</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Footer: Actions */}
       <View style={styles.footer}>
