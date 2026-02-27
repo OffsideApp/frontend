@@ -1,15 +1,16 @@
-// components/FeedCard.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image'; // Using expo-image as you did in select-club
 import { Play, Heart, MessageSquare, AlertOctagon } from 'lucide-react-native';
+import { CLUBS } from "@/constants/clubs"; // Import your existing constants
 
 type FeedCardProps = {
   username: string;
   club: string;
   content: string;
   time: string;
-  hasAudio?: boolean; // Optional prop for voice rants
-  audioDuration?: string; // Optional prop for voice rant length
+  hasAudio?: boolean;
+  audioDuration?: string;
 };
 
 export default function FeedCard({ 
@@ -20,29 +21,40 @@ export default function FeedCard({
   hasAudio, 
   audioDuration 
 }: FeedCardProps) {
+  
+  // Find the club object to get the ESPN logo URL
+  const clubData = CLUBS.find(c => c.name === club);
+  const clubLogo = clubData?.logo;
+
   return (
     <View style={styles.card}>
-      {/* Header: Avatar + Name + Time */}
       <View style={styles.headerRow}>
-        {/* Avatar Placeholder */}
+        {/* User Avatar */}
         <View style={styles.avatar} />
         
         <View>
           <View style={styles.userInfo}>
             <Text style={styles.username}>{username}</Text>
-            {/* Club Badge */}
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{club}</Text>
+            
+            {/* Club Badge with ESPN Logo */}
+            <View >
+               {clubLogo ? (
+                 <Image 
+                  source={{ uri: clubLogo }} 
+                  style={styles.clubLogo} 
+                  contentFit="contain"
+                  transition={200}
+                />
+               ) : null}
+              {/* <Text style={styles.badgeText}>{club}</Text> */}
             </View>
           </View>
           <Text style={styles.timestamp}>{time}</Text>
         </View>
       </View>
 
-      {/* The Rant Text */}
       <Text style={styles.content}>{content}</Text>
 
-      {/* Conditionally render The Audio Player ONLY if hasAudio is true */}
       {hasAudio && (
         <TouchableOpacity style={styles.audioPlayer}>
           <View style={styles.playButton}>
@@ -53,7 +65,6 @@ export default function FeedCard({
         </TouchableOpacity>
       )}
 
-      {/* Footer: Actions */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.actionButton}>
           <Heart size={20} color="#A1A1A1" />
@@ -104,15 +115,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginRight: 8,
   },
-  badge: {
-    backgroundColor: '#0047AB', // Default blue, we can make this dynamic later
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  clubLogo: {
+    width: 18,
+    height: 18,
+    marginRight: 6,
   },
   badgeText: {
-    color: 'white',
-    fontSize: 10,
+    color: '#E0E0E0',
+    fontSize: 11,
     fontWeight: 'bold',
     textTransform: 'uppercase',
   },
@@ -141,7 +159,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#CCFF00', // Neon Green
+    backgroundColor: '#CCFF00',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,

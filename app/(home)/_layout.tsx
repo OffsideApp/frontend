@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { router, Tabs } from 'expo-router';
 import { Home, Mic2, User } from 'lucide-react-native';
 import { View, StyleSheet, Platform } from 'react-native';
 // 1. Import this hook to detect the safe area (notch/home bar)
@@ -43,8 +43,14 @@ export default function TabLayout() {
         }}
       />
 
-      <Tabs.Screen
+   <Tabs.Screen
         name="matchday"
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault(); // Prevent navigating to the matchday page
+            router.push('/create-post'); // Slide up the modal!
+          },
+        }}
         options={{
           tabBarIcon: () => (
             <View style={styles.floatingButton}>

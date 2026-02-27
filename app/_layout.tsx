@@ -58,6 +58,14 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding" /> {/* Onboarding UI */}
           <Stack.Screen name="(auth)" /> {/* Login Flow */}
           <Stack.Screen name="(home)" /> {/* Main App */}
+
+          <Stack.Screen 
+          name="create-post" 
+          options={{ 
+            presentation: 'modal', 
+            animation: 'slide_from_bottom' 
+          }}
+          />
         </Stack>
       </QueryClientProvider>
     </>
