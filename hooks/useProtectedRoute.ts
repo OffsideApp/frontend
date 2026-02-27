@@ -44,9 +44,9 @@ export function useProtectedRoute() {
         return; // 🛑 Stop here until they pick a club
       }
 
-      // STEP 2: If they have a club but NO username, lock them on set-profile
+      // STEP 2: If they have a club but NO username, 
       if (!user.hasUsername) {
-        if (!isOnSetProfile) {
+        if (!isOnSetProfile && !isOnSelectClub) {
           router.replace('/(auth)/set-profile');
         }
         return; // 🛑 Stop here until they set a username

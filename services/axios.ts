@@ -1,6 +1,7 @@
 // services/api.ts
 import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
+import { router } from 'expo-router';
 
 // 👇 CHANGE THIS LINE
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api/v1"; 
@@ -31,15 +32,20 @@ api.interceptors.request.use(
 );
 
 // Response Interceptor: Handle 401 (Optional: Auto-logout or Refresh logic here)
+// 2. Response Interceptor: Catch 401 Unauthorized globally
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response;
+  },
   (error) => {
-    // If 401 Unauthorized, we might want to logout
-    console.log("❌ BACKEND REJECTION REASON:", error.response?.data);
-    if (error.response?.status === 401) {
-      // For now, just log it. We will add Refresh Logic later.
-      console.log('Session expired or unauthorized');
-    }
+    // If the backend says the user is unauthorized (deleted, expired token, etc.)
+    if (error.response && error.response.status === 401) {
+      console.log('User invalid or token expired. Forcing logout...');
+      // Clear the Zustand store & AsyncStorage
+      useAuthStore.getState().logout(); 
+      // Kick them back to the login screen
+      router.replace('/(auth)/login');
+    }  
     return Promise.reject(error);
   }
 );

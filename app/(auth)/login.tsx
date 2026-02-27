@@ -8,7 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator, // <--- For the loading spinner
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react-native";
@@ -16,7 +16,6 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import { Colors } from "@/constants/theme";
 import { useRouter } from "expo-router";
 
-// 1. Import Hook Form & Zod
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { LoginFormType, loginSchema } from "@/schema/auth.schema";
@@ -26,10 +25,8 @@ export default function LoginScreen() {
   const router = useRouter();
   const [passwordVisible, setPasswordVisible] = useState(false);
   
-  // 3. Get the Login API Mutation
   const { loginMutation } = useAuthMutations();
 
-  // 4. Setup Form
   const { control, handleSubmit, formState: { errors } } = useForm<LoginFormType>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -42,10 +39,7 @@ export default function LoginScreen() {
     router.replace("/(auth)/signup");
   };
 
-  // 5. The Submit Function
   const onSubmit = (data: LoginFormType) => {
-    // This calls the API. The success logic (store update & navigation) 
-    // is handled inside 'services/auth.queries.ts'
     loginMutation.mutate(data);
   };
 
@@ -57,7 +51,6 @@ export default function LoginScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           
-          {/* CENTER CONTAINER FOR TABLETS */}
           <View style={styles.tabletContainer}>
 
             {/* Header */}
@@ -98,7 +91,7 @@ export default function LoginScreen() {
                 control={control}
                 name="email"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <View style={[styles.inputContainer, errors.email && styles.inputError]}>
+                  <View style={[styles.inputContainer, errors.email ? styles.inputError : null]}>
                     <Mail color="#555" size={20} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
@@ -113,7 +106,9 @@ export default function LoginScreen() {
                   </View>
                 )}
               />
-              {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
+              {errors.email?.message ? (
+                <Text style={styles.errorText}>{String(errors.email.message)}</Text>
+              ) : null}
 
               {/* --- PASSWORD --- */}
               <Text style={styles.label}>PASSWORD</Text>
@@ -121,7 +116,7 @@ export default function LoginScreen() {
                 control={control}
                 name="password"
                 render={({ field: { onChange, onBlur, value } }) => (
-                  <View style={[styles.inputContainer, errors.password && styles.inputError]}>
+                  <View style={[styles.inputContainer, errors.password ? styles.inputError : null]}>
                     <Lock color="#555" size={20} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
@@ -132,9 +127,7 @@ export default function LoginScreen() {
                       onChangeText={onChange}
                       value={value}
                     />
-                    <TouchableOpacity
-                      onPress={() => setPasswordVisible(!passwordVisible)}
-                    >
+                    <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
                       {passwordVisible ? (
                         <EyeOff color="#555" size={20} />
                       ) : (
@@ -144,7 +137,9 @@ export default function LoginScreen() {
                   </View>
                 )}
               />
-              {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
+              {errors.password?.message ? (
+                <Text style={styles.errorText}>{String(errors.password.message)}</Text>
+              ) : null}
 
               <TouchableOpacity style={styles.forgotPassword} onPress={() => router.push('/(auth)/forgot-password')}>
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
@@ -152,17 +147,17 @@ export default function LoginScreen() {
 
               {/* --- SUBMIT BUTTON --- */}
               <TouchableOpacity
-                style={[styles.kickOffButton, loginMutation.isPending && styles.kickOffButtonDisabled]}
+                style={[styles.kickOffButton, loginMutation.isPending ? styles.kickOffButtonDisabled : null]}
                 onPress={handleSubmit(onSubmit)}
                 disabled={loginMutation.isPending}
               >
                 {loginMutation.isPending ? (
                    <ActivityIndicator color="black" />
                 ) : (
-                  <>
+                  <View style={styles.buttonContent}>
                     <FontAwesome5 name="futbol" size={24} color={Colors.background} />
                     <Text style={styles.kickOffText}>KICK OFF</Text>
-                  </>
+                  </View>
                 )}
               </TouchableOpacity>
 
@@ -280,8 +275,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 0 },
-    flexDirection: "row",
-    gap: 10,
     shadowOpacity: 0.6,
     shadowRadius: 15,
     elevation: 10,
@@ -289,6 +282,11 @@ const styles = StyleSheet.create({
   },
   kickOffButtonDisabled: {
     opacity: 0.7,
+  },
+  buttonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   kickOffText: {
     color: "black",

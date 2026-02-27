@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, StatusBar, Button } from 'react-native';
 import FeedCard from '../../components/FeedCard'; // Import the component we just made
 import { Colors } from '@/constants/theme';
+import { useAuthStore } from '@/store/useAuthStore';
 
 // Dummy Data
 const RANTS = [
@@ -12,6 +13,7 @@ const RANTS = [
 ];
 
 export default function FeedScreen() {
+  const {logout} = useAuthStore()
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -19,6 +21,7 @@ export default function FeedScreen() {
       {/* App Header */}
       <View style={styles.header}>
         <Text style={styles.logo}>OFFSIDE</Text>
+        <Button title="FORCE LOGOUT" onPress={logout} color="red" />
       </View>
 
       {/* The List */}

@@ -21,7 +21,8 @@ export const setProfileSchema = z.object({
     .min(3, "Username must be at least 3 characters")
     .max(20, "Username is too long")
     .trim()
-    .regex(/^[a-zA-Z0-9]+$/, "Only letters and numbers allowed. No spaces or symbols!"),
+    .regex(/^[a-zA-Z0-9]+$/, "Only letters and numbers allowed. No spaces or symbols!")
+    .transform((val) => val.toLowerCase()),
   bio: z
     .string()
     .max(160, "Bio cannot exceed 160 characters")

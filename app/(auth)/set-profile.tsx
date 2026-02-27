@@ -89,8 +89,8 @@ export default function SetProfileScreen() {
                     style={styles.input}
                     placeholder="jayjay_10"
                     placeholderTextColor="#555"
+                    onChangeText={onChange}
                     onBlur={onBlur}
-                    onChangeText={(text) => onChange(text.toLowerCase())}
                     value={value}
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -149,7 +149,7 @@ export default function SetProfileScreen() {
 
         <StickyFooter
           title={
-            setProfileMutation.isPending ? "SAVING..." : "NEXT: SELECT CLUB"
+            setProfileMutation.isPending ? "SAVING..." : "CONTINUE"
           }
           onPress={handleSubmit(onSubmit)}
           disabled={!isValid || setProfileMutation.isPending}
