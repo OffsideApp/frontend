@@ -17,11 +17,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Colors } from "@/constants/theme"; 
 import { useRouter } from "expo-router"; 
 import { SignupFormType, signupSchema } from "@/schema/auth.schema"; // Ensure this file exists
-import { useAuthMutations } from '../../services/auth/auth.queries';
+import { useAuthMutations } from '../services/auth/auth.queries';
+import { useNavigation } from "@react-navigation/native";
 
 export default function SignupScreen() {
   const { registerMutation } = useAuthMutations();
   const router = useRouter(); 
+  const navigation = useNavigation<any>();
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   // 1. Setup Form with Zod Validation
@@ -41,7 +43,7 @@ export default function SignupScreen() {
   };
 
   const handleLoginNavigation = () => {
-    router.replace("/(auth)/login");
+    navigation.navigate("Login");
   };
 
   return (

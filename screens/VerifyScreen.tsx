@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, ShieldCheck } from "lucide-react-native";
 import { Colors } from "@/constants/theme"; 
 import { useRouter, useLocalSearchParams } from "expo-router"; 
+import { useRoute } from '@react-navigation/native';
 
 // 1. Imports for Logic
 import { useForm, Controller } from 'react-hook-form';
@@ -30,9 +31,11 @@ type VerifyFormType = z.infer<typeof verifySchema>;
 
 export default function VerifyScreen() {
   const router = useRouter(); 
+  const route = useRoute<any>();
   
   // 3. Get Email from previous screen
-  const { email } = useLocalSearchParams<{ email: string }>();
+//   const { email } = useLocalSearchParams<{ email: string }>();
+  const email = route.params?.email; // 👈 Here is your passed email
 
   // 4. Setup Mutation & Form
   const { verifyMutation } = useAuthMutations();

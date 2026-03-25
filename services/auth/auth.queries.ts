@@ -2,12 +2,12 @@
 import { useMutation } from '@tanstack/react-query';
 import { AuthService } from './auth.service';
 import { Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native'; // 👈 Swapped Expo Router for React Navigation
 import { useAuthStore } from '../../store/useAuthStore';
 import { ApiError } from '../../types/auth.types';
 
 export const useAuthMutations = () => {
-  const router = useRouter();
+  const navigation = useNavigation<any>(); // 👈 Hooked up React Navigation
   const { login, updateUser } = useAuthStore();
 
   // 1. REGISTER HOOK
@@ -18,11 +18,8 @@ export const useAuthMutations = () => {
       Alert.alert("Error", msg);
     },
     onSuccess: (_, variables) => {
-      // Navigate to Verify Email screen, passing the email
-      router.push({
-        pathname: "/(auth)/verify",
-        params: { email: variables.email }
-      });
+      // Navigate to Verify Email screen, passing the email as a param
+      navigation.navigate("Verify", { email: variables.email });
     }
   });
 
@@ -35,7 +32,7 @@ export const useAuthMutations = () => {
     },
     onSuccess: () => {
       Alert.alert("Success", "Email verified! Please login.");
-      router.replace("/(auth)/login");
+      navigation.navigate("Login"); // 👈 Changed to standard route name
     }
   });
 
@@ -48,23 +45,16 @@ export const useAuthMutations = () => {
     },
     onSuccess: (data) => {
       if (data.data) {
-        // Save to Zustand
+        // 🚀 THE MAGIC: Saving to Zustand flips `isAuthenticated` to true.
+        // App.tsx will automatically unmount the Auth screens and mount 
+        // SetProfile, SelectClub, or Main Tabs based on the user's data!
+        // No manual navigation needed here!
         login(data.data);
-
-        // Smart Navigation based on your flow
-        if (!data.data.hasUsername) {
-           // If they haven't set a username yet (New Flow)
-           // router.replace("/(auth)/set-profile"); // You'll build this next
-           console.log("Go to Set Username");
-        } else if (!data.data.hasSelectedClub) {
-           router.replace("/(auth)/select-club");
-        } else {
-           router.replace("/(home)/feed");
-        }
       }
     }
   });
 
+  // 4. SELECT CLUB HOOK
   const selectClubMutation = useMutation({
     mutationFn: AuthService.selectClub,
     onError: (error: any) => {
@@ -72,23 +62,22 @@ export const useAuthMutations = () => {
       Alert.alert("Error", msg);
     },
     onSuccess: () => {
-      // Tell Zustand the club is saved. The Route Guard handles the navigation!
+      // 🚀 THE MAGIC: Tell Zustand the club is saved. 
+      // App.tsx automatically pushes them to the next relevant screen!
       updateUser({ hasSelectedClub: true });
-      router.replace("/(auth)/set-profile")
-      
     }
   });
 
+  // 5. SET PROFILE HOOK
   const setProfileMutation = useMutation({
     mutationFn: AuthService.setProfile,
     onError: (error: any) => {
-      // If the backend says the username is taken, it will show here!
       const msg = error.response?.data?.message || "Failed to set profile";
       Alert.alert("Error", msg);
     },
     onSuccess: () => {
-      // 🚀 THE MAGIC: Tell Zustand the user now has a username!
-      // The Route Guard will instantly push them to Select Club.
+      // 🚀 THE MAGIC: Tell Zustand the user now has a username.
+      // App.tsx automatically pushes them to the next relevant screen!
       if (updateUser) {
          updateUser({ hasUsername: true });
       }

@@ -15,16 +15,18 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Colors } from '@/constants/theme';
+import { useNavigation } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 
 export default function Onboarding() {
   const router = useRouter();
+  const navigation = useNavigation<any>();
   const { completeOnboarding } = useAuthStore();
 
   const handleGetStarted = () => {
     completeOnboarding();
-    router.replace('/(auth)/login');
+    navigation.navigate("Login");
   };
 
   return (
@@ -49,7 +51,7 @@ export default function Onboarding() {
         {/* Top Section with SKIP */}
         <View style={styles.topSection}>
           <TouchableOpacity 
-            onPress={() => router.replace('/(auth)/login')}
+            onPress={() => navigation.navigate("Login")}
             style={styles.skipButton}
           >
             <Text style={styles.skipText}>SKIP</Text>

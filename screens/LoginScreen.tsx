@@ -15,6 +15,7 @@ import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { Colors } from "@/constants/theme";
 import { useRouter } from "expo-router";
+import { useNavigation } from '@react-navigation/native';
 
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,6 +24,7 @@ import { useAuthMutations } from "@/services/auth/auth.queries";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const navigation = useNavigation<any>();
   const [passwordVisible, setPasswordVisible] = useState(false);
   
   const { loginMutation } = useAuthMutations();
@@ -36,7 +38,7 @@ export default function LoginScreen() {
   });
 
   const handleSignupNavigation = () => {
-    router.replace("/(auth)/signup");
+    navigation.navigate("Signup");
   };
 
   const onSubmit = (data: LoginFormType) => {
@@ -141,7 +143,7 @@ export default function LoginScreen() {
                 <Text style={styles.errorText}>{String(errors.password.message)}</Text>
               ) : null}
 
-              <TouchableOpacity style={styles.forgotPassword} onPress={() => router.push('/(auth)/forgot-password')}>
+              <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation.navigate("ForgotPassword")}>
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
 

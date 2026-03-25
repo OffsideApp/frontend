@@ -19,7 +19,7 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
 
   const handleSendOTP = () => {
-    router.push("/(auth)/verify");
+    navigation.navigate("Verify");
   };
 
   return (
@@ -34,7 +34,7 @@ export default function ForgotPasswordScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.replace("/(auth)/login")}>
+            <TouchableOpacity onPress={() => navigation.navigate("Login")}>
               <ArrowLeft color="white" size={24} />
             </TouchableOpacity>
           </View>
@@ -99,7 +99,7 @@ export default function ForgotPasswordScreen() {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Remembered it? </Text>
-            <TouchableOpacity onPress={() => router.replace("/(auth)/login")}>
+            <TouchableOpacity onPress={() => navigation.navigate("Login")}>
               <Text style={styles.linkTextBold}>Log In</Text>
             </TouchableOpacity>
           </View>
