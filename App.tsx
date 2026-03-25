@@ -12,7 +12,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Import your Zustand store (adjust path if necessary)
-import { useAuthStore } from "./store/useAuthStore"; 
+import { useAuthStore } from "./store/useAuthStore";
 
 // Import your new Screens
 import OnboardingScreen from "./screens/OnboardingScreen";
@@ -20,12 +20,13 @@ import LoginScreen from "./screens/LoginScreen";
 import SignupScreen from "./screens/SignupScreen";
 import FeedScreen from "./screens/FeedScreen";
 import ProfileScreen from "./screens/ProfileScreen";
-import ForgotPasswordScreen from "./screens/ForgotPasswordScreenn"
+import ForgotPasswordScreen from "./screens/ForgotPasswordScreenn";
 import ResetPasswordScreen from "./screens/ResetPasswordScreen";
 import SelectClubScreen from "./screens/SelectClubScreen";
 import SetProfileScreen from "./screens/SelectProfileScreen";
 import VerifyScreen from "./screens/VerifyScreen";
 import MatchdayScreen from "./screens/MatchDayScreen";
+import CreatePostScreen from "./screens/CreatePostScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -40,10 +41,13 @@ function HomeTabs() {
         tabBarInactiveTintColor: "gray",
         tabBarIcon: ({ color, focused }) => {
           let iconName: any;
-          if (route.name === "Feed") iconName = focused ? "home" : "home-outline";
-          else if (route.name === "Matchday") iconName = focused ? "football" : "football-outline";
-          else if (route.name === "Profile") iconName = focused ? "person" : "person-outline";
-          
+          if (route.name === "Feed")
+            iconName = focused ? "home" : "home-outline";
+          else if (route.name === "Matchday")
+            iconName = focused ? "football" : "football-outline";
+          else if (route.name === "Profile")
+            iconName = focused ? "person" : "person-outline";
+
           return <Ionicons name={iconName} size={24} color={color} />;
         },
       })}
@@ -60,7 +64,7 @@ function NavigationContent() {
   // Pull authentication state directly from Zustand
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
-  
+
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -90,12 +94,19 @@ function NavigationContent() {
           <>
             {/* Example of condition: If user hasn't selected a club yet */}
             {!user?.hasSelectedClub ? (
-               <Stack.Screen name="SelectClub" component={SelectClubScreen} />
+              <Stack.Screen name="SelectClub" component={SelectClubScreen} />
             ) : !user?.hasUsername ? (
-               <Stack.Screen name="SetProfile" component={SetProfileScreen} />
+              <Stack.Screen name="SetProfile" component={SetProfileScreen} />
             ) : (
-               // Fully setup user goes to Main Tabs
-               <Stack.Screen name="Main" component={HomeTabs} />
+              // Fully setup user goes to Main Tabs
+              <>
+                <Stack.Screen name="Main" component={HomeTabs} />
+                <Stack.Screen
+                  name="CreatePost"
+                  component={CreatePostScreen}
+                  options={{ presentation: "modal" }} // Makes it slide up!
+                />
+              </>
             )}
           </>
         ) : (
@@ -107,8 +118,14 @@ function NavigationContent() {
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />
             <Stack.Screen name="Verify" component={VerifyScreen} />
-            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+            <Stack.Screen
+              name="ForgotPassword"
+              component={ForgotPasswordScreen}
+            />
+            <Stack.Screen
+              name="ResetPassword"
+              component={ResetPasswordScreen}
+            />
           </>
         )}
       </Stack.Navigator>
@@ -120,7 +137,7 @@ const queryClient = new QueryClient();
 // --- APP ENTRY POINT ---
 export default function App() {
   return (
-   <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <NavigationContent />
