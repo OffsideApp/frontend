@@ -1,6 +1,6 @@
 export interface CreatePostPayload {
   content: string;
   hasAudio?: boolean;
-  audioUrl?: string;
+  audioUrl?: string | null;
   audioDuration?: string;
 }

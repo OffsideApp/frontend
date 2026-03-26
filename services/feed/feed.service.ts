@@ -1,10 +1,12 @@
-import { CreatePostPayload } from "@/types/feed.types";
+// import { CreatePostPayload } from "@/types/feed.types";
 import { api } from "../axios";
 
 export class FeedService {
   // 1. Create a Post
-  static async createPost(data: CreatePostPayload) {
-    const response = await api.post('/feed/create-post', data);
+  static async createPost(formData: FormData) {
+    const response = await api.post('/feed/create-post', formData, {
+      transformRequest: (data) => data,
+    });
     return response.data.data; 
   }
 

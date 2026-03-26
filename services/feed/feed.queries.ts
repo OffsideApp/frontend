@@ -17,7 +17,7 @@ export const useFeedQueries = () => {
 
   // 2. Hook to create a post
   const createPostMutation = useMutation({
-    mutationFn: (data: CreatePostPayload) => FeedService.createPost(data),
+    mutationFn: (data: FormData) => FeedService.createPost(data),
     onSuccess: () => {
       // Instantly refresh the feed when a new post is successfully created!
       queryClient.invalidateQueries({ queryKey: ['feed'] });

@@ -16,7 +16,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Colors } from "@/constants/theme"; 
 import { useRouter } from "expo-router"; 
-import { SignupFormType, signupSchema } from "@/schema/auth.schema"; // Ensure this file exists
+import { SignupFormType, signupSchema } from "@/schema/auth.schema";
 import { useAuthMutations } from '../services/auth/auth.queries';
 import { useNavigation } from "@react-navigation/native";
 
