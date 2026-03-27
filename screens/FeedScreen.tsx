@@ -81,6 +81,8 @@ export default function FeedScreen() {
               hasAudio={item.hasAudio} 
               audioDuration={item.audioDuration} 
               audioUrl={item.audioUrl}
+              hasImage={item.hasImage}
+              imageUrl={item.imageUrl}
             />
           )}
           contentContainerStyle={styles.listContent}

@@ -1,24 +1,16 @@
+// screens/SelectClubScreen.tsx
 import React, { useState } from "react";
 import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  TextInput, 
-  FlatList, 
-  Dimensions, 
-  KeyboardAvoidingView,
-  Platform
+  View, Text, StyleSheet, TouchableOpacity, TextInput, 
+  FlatList, Dimensions, KeyboardAvoidingView, Platform, ActivityIndicator
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowLeft, Search, Check, RotateCw } from "lucide-react-native";
+import { ArrowLeft, Search, Check } from "lucide-react-native";
 import { Colors } from "@/constants/theme"; 
-import { useRouter } from "expo-router";
-import StickyFooter from "@/components/StickyFooter";
+import { useNavigation } from "@react-navigation/native"; // 🚀 FIX 1: Using the correct router!
 import { Image } from 'expo-image';
 import { CLUBS } from "@/constants/clubs";
 
-// 👇 1. Import your hook
 import { useAuthMutations } from "@/services/auth/auth.queries";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -27,20 +19,20 @@ const COLUMN_COUNT = 3;
 const ITEM_SIZE = (SCREEN_WIDTH - 48) / COLUMN_COUNT;
 
 export default function SelectClubScreen() {
-  const router = useRouter();
+  const navigation = useNavigation<any>(); 
   const [search, setSearch] = useState("");
   const [selectedClub, setSelectedClub] = useState<string | null>(null);
 
-  // 👇 2. Initialize the mutation
   const { selectClubMutation } = useAuthMutations();
   const { logout } = useAuthStore();
 
   const handleContinue = () => {
     if (selectedClub) {
-      // 👇 3. Find the Club Name (backend expects "Arsenal", not "1")
       const clubObj = CLUBS.find(c => c.id === selectedClub);
       if (clubObj) {
-        selectClubMutation.mutate({clubName: clubObj.name });
+        // This fires the API. On success, your auth.queries.ts updates Zustand,
+        // and App.tsx will automatically slide you to the next screen!
+        selectClubMutation.mutate({ clubName: clubObj.name });
       }
     }
   };
@@ -60,7 +52,6 @@ export default function SelectClubScreen() {
               <Check size={10} color="black" strokeWidth={4} />
             </View>
           )}
-          
           <Image 
             source={{ uri: item.logo }} 
             style={styles.clubLogo} 
@@ -68,7 +59,6 @@ export default function SelectClubScreen() {
             transition={200}
           />
         </View>
-        
         <Text style={[styles.clubName, isSelected && styles.clubNameSelected]}>
           {item.name}
         </Text>
@@ -80,20 +70,19 @@ export default function SelectClubScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}> 
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}> 
            <ArrowLeft color="white" size={24} />
         </TouchableOpacity>
         
         <Text style={styles.headerTitle}>Select Your Club</Text>
         
-     <TouchableOpacity 
+        <TouchableOpacity 
            style={styles.refreshButton}
            onPress={() => {
-              logout(); // Wipes the bad token from Zustand
-              router.replace('/(auth)/login'); // Kicks you back to login
+              logout(); // Wipes Zustand, App.tsx kicks you to Login instantly
            }}
         >
-            <Text style={{color: 'red', fontSize: 10, fontWeight: 'bold'}}>NUKE</Text>
+            <Text style={{color: '#FF3B30', fontSize: 10, fontWeight: 'bold'}}>NUKE</Text>
         </TouchableOpacity>
       </View>
 
@@ -129,26 +118,36 @@ export default function SelectClubScreen() {
           }
         />
 
-        {/* 👇 4. Connect the StickyFooter to the mutation state */}
-        <StickyFooter 
-          title={selectClubMutation.isPending ? "SAVING..." : "START BANTERING"} 
-          onPress={handleContinue} 
-          disabled={!selectedClub || selectClubMutation.isPending}  
-        />
+        {/* 🚀 FIX 2: A dedicated, static Continue button instead of the Mic component */}
+        <View style={styles.footer}>
+          <TouchableOpacity 
+            style={[styles.continueButton, (!selectedClub || selectClubMutation.isPending) && styles.continueButtonDisabled]}
+            onPress={handleContinue}
+            disabled={!selectedClub || selectClubMutation.isPending}
+            activeOpacity={0.8}
+          >
+            {selectClubMutation.isPending ? (
+              <ActivityIndicator color="black" />
+            ) : (
+              <Text style={[styles.continueButtonText, !selectedClub && styles.continueButtonTextDisabled]}>
+                CONTINUE
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
 
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-// ... Keep your exact same styles down here
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0D0D0D" },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10 },
   headerTitle: { color: 'white', fontWeight: 'bold', fontSize: 16 },
   iconButton: { padding: 5 },
   refreshButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#1F1F1F', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-  listContent: { paddingHorizontal: 20, paddingBottom: 120 },
+  listContent: { paddingHorizontal: 20, paddingBottom: 20 },
   textSection: { alignItems: 'center', marginTop: 20, marginBottom: 30 },
   bigTitle: { color: 'white', fontSize: 24, fontWeight: 'bold', marginBottom: 8 },
   subtitle: { color: '#777', fontSize: 14, textAlign: 'center' },
@@ -160,6 +159,34 @@ const styles = StyleSheet.create({
   clubCardSelected: { borderColor: Colors.primary, backgroundColor: '#1F1F1F' },
   checkBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: Colors.primary, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
   clubLogo: { width: 48, height: 48 },
-  clubName: { color: '#555', fontSize: 12, fontWeight: '500' },
+  clubName: { color: '#555', fontSize: 12, fontWeight: '500', textAlign: 'center' },
   clubNameSelected: { color: Colors.primary, fontWeight: 'bold' },
+  
+  // NEW FOOTER STYLES
+  footer: {
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#0D0D0D', 
+  },
+  continueButton: {
+    backgroundColor: Colors.primary, 
+    height: 56,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  continueButtonDisabled: {
+    backgroundColor: '#333333', 
+  },
+  continueButtonText: {
+    color: '#000000', 
+    fontSize: 16,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  continueButtonTextDisabled: {
+    color: '#777777', 
+  },
 });

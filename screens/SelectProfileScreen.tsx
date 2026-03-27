@@ -8,19 +8,19 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowLeft, AtSign, PenTool } from "lucide-react-native";
+import { ArrowLeft, AtSign } from "lucide-react-native";
 import { Colors } from "@/constants/theme";
-import { useRouter } from "expo-router";
-import StickyFooter from "@/components/StickyFooter";
+import { useNavigation } from "@react-navigation/native"; // 🚀 FIX 1: Correct router
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { setProfileSchema, setProfileType } from "@/schema/auth.schema";
 import { useAuthMutations } from "@/services/auth/auth.queries";
 
 export default function SetProfileScreen() {
-  const router = useRouter();
+  const navigation = useNavigation<any>(); // 🚀 Initialized correct navigation
   const { setProfileMutation } = useAuthMutations();
   const [bioLength, setBioLength] = useState(0);
 
@@ -38,15 +38,16 @@ export default function SetProfileScreen() {
   });
 
   const onSubmit = (data: setProfileType) => {
-    // Send it to the backend!
+    // Sends to backend -> Zustand updates -> App.tsx routes to Feed!
     setProfileMutation.mutate(data);
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        {/* 🚀 FIX 2: Fixed Back Button logic */}
         <TouchableOpacity
-          onPress={() => router.replace("/(auth)/select-club")}
+          onPress={() => navigation.goBack()} 
           style={styles.iconButton}
         >
           <ArrowLeft color="white" size={24} />
@@ -147,13 +148,26 @@ export default function SetProfileScreen() {
           </View>
         </ScrollView>
 
-        <StickyFooter
-          title={
-            setProfileMutation.isPending ? "SAVING..." : "CONTINUE"
-          }
-          onPress={handleSubmit(onSubmit)}
-          disabled={!isValid || setProfileMutation.isPending}
-        />
+        {/* 🚀 FIX 3: Static Continue Button instead of the Mic Footer */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[
+              styles.continueButton,
+              (!isValid || setProfileMutation.isPending) && styles.continueButtonDisabled
+            ]}
+            onPress={handleSubmit(onSubmit)}
+            disabled={!isValid || setProfileMutation.isPending}
+            activeOpacity={0.8}
+          >
+            {setProfileMutation.isPending ? (
+              <ActivityIndicator color="black" />
+            ) : (
+              <Text style={[styles.continueButtonText, !isValid && styles.continueButtonTextDisabled]}>
+                CONTINUE
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -171,7 +185,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { color: "white", fontWeight: "bold", fontSize: 16 },
   iconButton: { padding: 5 },
-  content: { paddingHorizontal: 20, paddingTop: 30, paddingBottom: 120 },
+  content: { paddingHorizontal: 20, paddingTop: 30, paddingBottom: 20 },
   textSection: { alignItems: "center", marginBottom: 40 },
   bigTitle: {
     color: "white",
@@ -234,4 +248,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   charCount: { color: "#555", fontSize: 12, fontWeight: "500" },
+
+  // NEW FOOTER STYLES
+  footer: {
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#0D0D0D',
+  },
+  continueButton: {
+    backgroundColor: Colors.primary,
+    height: 56,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  continueButtonDisabled: {
+    backgroundColor: '#333333',
+  },
+  continueButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  continueButtonTextDisabled: {
+    color: '#777777',
+  },
 });
