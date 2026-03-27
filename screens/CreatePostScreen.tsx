@@ -1,16 +1,15 @@
-// screens/CreatePostScreen.tsx
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, 
-  KeyboardAvoidingView, Platform, ActivityIndicator, Keyboard
+  KeyboardAvoidingView, Platform, ActivityIndicator, Keyboard, Image
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { X, Mic, Square, Play, Trash2 } from 'lucide-react-native'; 
-import { Audio } from 'expo-av'; // 👈 The magic audio library
+import { X, Mic, Square, Play, Trash2, Image as ImageIcon } from 'lucide-react-native'; 
+import { Audio } from 'expo-av'; 
+import * as ImagePicker from 'expo-image-picker'; // 👈 NEW: Image Picker
 import { Colors } from '../constants/theme'; 
 import { useFeedQueries } from '../services/feed/feed.queries';
 
-// Helper to format milliseconds into mm:ss
 const formatTime = (millis: number) => {
   const minutes = Math.floor(millis / 60000);
   const seconds = ((millis % 60000) / 1000).toFixed(0);
@@ -21,89 +20,69 @@ export default function CreatePostScreen() {
   const navigation = useNavigation<any>();
   const [content, setContent] = useState('');
   
-  // --- AUDIO STATES ---
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  // --- MEDIA STATES ---
   const [audioUri, setAudioUri] = useState<string | null>(null);
+  const [imageUri, setImageUri] = useState<string | null>(null); // 👈 NEW: Image State
+  
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isUploading, setIsUploading] = useState(false); // For later!
 
   const { createPostMutation } = useFeedQueries();
 
-  // Cleanup memory when closing the screen
   useEffect(() => {
     return sound ? () => { sound.unloadAsync(); } : undefined;
   }, [sound]);
 
-  // --- AUDIO FUNCTIONS ---
+  // --- IMAGE LOGIC ---
+  const pickImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted === false) {
+      alert("We need permission to access your camera roll to post memes!");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8, // Compress slightly for faster uploads
+    });
+
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  // --- AUDIO LOGIC ---
+  // ... (Keep your existing startRecording, stopRecording, playAudio, and deleteAudio functions exactly the same) ...
   async function startRecording() {
     try {
       Keyboard.dismiss();
-      // 1. Request microphone permissions
       const permission = await Audio.requestPermissionsAsync();
-      if (permission.status !== 'granted') {
-        alert('We need microphone permissions to record your rant!');
-        return;
-      }
-
-      // 2. Prepare the device for recording
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      // 3. Start recording
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      
+      if (permission.status !== 'granted') return alert('Need mic permissions!');
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
       setRecording(recording);
-      
-      // 4. Track duration while recording
-      recording.setOnRecordingStatusUpdate((status) => {
-        if (status.isRecording) {
-          setRecordingDuration(status.durationMillis);
-        }
-      });
-
-    } catch (err) {
-      console.error('Failed to start recording', err);
-    }
+      recording.setOnRecordingStatusUpdate((status) => { if (status.isRecording) setRecordingDuration(status.durationMillis); });
+    } catch (err) { console.error(err); }
   }
 
   async function stopRecording() {
     if (!recording) return;
-    try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI(); // 👈 This is the local file on the phone
-      setAudioUri(uri);
-      setRecording(null);
-      
-      // Reset audio mode for playback
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-    } catch (err) {
-      console.error('Failed to stop recording', err);
-    }
+    await recording.stopAndUnloadAsync();
+    setAudioUri(recording.getURI());
+    setRecording(null);
+    await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
   }
 
   async function playAudio() {
     if (!audioUri) return;
-    try {
-      const { sound } = await Audio.Sound.createAsync({ uri: audioUri });
-      setSound(sound);
-      setIsPlaying(true);
-      await sound.playAsync();
-      
-      // Reset when finished playing
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          setIsPlaying(false);
-        }
-      });
-    } catch (err) {
-      console.error('Failed to play audio', err);
-    }
+    const { sound } = await Audio.Sound.createAsync({ uri: audioUri });
+    setSound(sound);
+    setIsPlaying(true);
+    await sound.playAsync();
+    sound.setOnPlaybackStatusUpdate((status) => { if (status.isLoaded && status.didJustFinish) setIsPlaying(false); });
   }
 
   function deleteAudio() {
@@ -113,40 +92,31 @@ export default function CreatePostScreen() {
   }
 
   // --- SUBMIT FUNCTION ---
-  // --- SUBMIT FUNCTION ---
   const handlePost = async () => {
-    if (!content.trim() && !audioUri) return;
+    if (!content.trim() && !audioUri && !imageUri) return;
     Keyboard.dismiss();
 
-    // 1. Create a new FormData instance
     const formData = new FormData();
     
-    // 2. Append the text content (if it exists)
-    if (content.trim()) {
-      formData.append('content', content);
-    }
+    if (content.trim()) formData.append('content', content);
 
-    // 3. Append the Audio File (if it exists)
     if (audioUri) {
-      // React Native specific trick: cast this object as `any` 
-      // because standard TS thinks FormData can only be strings/blobs
-      formData.append('audioFile', {
-        uri: audioUri,
-        name: 'rant.m4a',
-        type: 'audio/m4a',
-      } as any);
-
-      // Append the duration we tracked
+      const filename = audioUri.split('/').pop() || 'rant.m4a';
+      const safeUri = Platform.OS === 'ios' ? audioUri.replace('file://', '') : audioUri;
+      formData.append('audioFile', { uri: safeUri, name: filename, type: 'audio/m4a' } as any);
       formData.append('audioDuration', formatTime(recordingDuration));
     }
 
-    // 4. Send it to the backend!
+    // 🚀 NEW: Append the image file!
+    if (imageUri) {
+      const filename = imageUri.split('/').pop() || 'image.jpg';
+      const safeUri = Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri;
+      formData.append('imageFile', { uri: safeUri, name: filename, type: 'image/jpeg' } as any);
+    }
+
     createPostMutation.mutate(formData, {
       onSuccess: () => navigation.goBack(),
-      onError: (error: any) => {
-        console.error("Failed to post:", error);
-        alert("Failed to upload post. Check your connection.");
-      }
+      onError: (error: any) => console.error("Failed to post:", error)
     });
   };
 
@@ -156,33 +126,38 @@ export default function CreatePostScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
           <X size={28} color="#FFFFFF" />
         </TouchableOpacity>
-        
         <TouchableOpacity 
-          style={[styles.postButton, (!content.trim() && !audioUri) && styles.postButtonDisabled]}
+          style={[styles.postButton, (!content.trim() && !audioUri && !imageUri) && styles.postButtonDisabled]}
           onPress={handlePost}
-          disabled={(!content.trim() && !audioUri) || createPostMutation.isPending || isUploading}
+          disabled={(!content.trim() && !audioUri && !imageUri) || createPostMutation.isPending}
         >
-          {createPostMutation.isPending || isUploading ? (
-            <ActivityIndicator size="small" color="#000" />
-          ) : (
-            <Text style={styles.postButtonText}>Post</Text>
-          )}
+          {createPostMutation.isPending ? <ActivityIndicator size="small" color="#000" /> : <Text style={styles.postButtonText}>Post</Text>}
         </TouchableOpacity>
       </View>
 
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.textInput}
-          placeholder="Drop your tactical masterclass (or rant)..."
+          placeholder="Drop your tactical masterclass, rant, or meme..."
           placeholderTextColor="#555"
           multiline
-          autoFocus={!recording && !audioUri}
+          autoFocus={!recording && !audioUri && !imageUri}
           maxLength={280} 
           value={content}
           onChangeText={setContent}
         />
         
-        {/* --- RECORDING UI INJECTION --- */}
+        {/* IMAGE PREVIEW */}
+        {imageUri && (
+          <View style={styles.imagePreviewContainer}>
+            <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+            <TouchableOpacity onPress={() => setImageUri(null)} style={styles.removeImageButton}>
+              <X size={16} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* RECORDING UI */}
         {recording && (
           <View style={styles.recordingActiveContainer}>
             <View style={styles.redDotPulse} />
@@ -190,7 +165,7 @@ export default function CreatePostScreen() {
           </View>
         )}
 
-        {/* --- AUDIO PLAYER UI INJECTION --- */}
+        {/* AUDIO PLAYER UI */}
         {audioUri && !recording && (
           <View style={styles.audioPlayerContainer}>
             <TouchableOpacity onPress={playAudio} style={styles.playButton}>
@@ -205,20 +180,25 @@ export default function CreatePostScreen() {
       </View>
 
       <View style={styles.toolbar}>
-        {/* Toggle between Start and Stop Recording */}
-        {recording ? (
-          <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: '#FF3B30' }]} onPress={stopRecording}>
-            <Square size={20} color="#FFF" fill="#FFF" />
-            <Text style={[styles.toolbarText, { color: '#FFF' }]}>Stop Recording</Text>
+        <View style={styles.toolbarLeft}>
+          {/* IMAGE BUTTON */}
+          <TouchableOpacity style={styles.toolbarIconButton} onPress={pickImage} disabled={!!recording}>
+            <ImageIcon size={24} color={Colors.primary} />
           </TouchableOpacity>
-        ) : !audioUri ? (
-          <TouchableOpacity style={styles.toolbarButton} onPress={startRecording}>
-            <Mic size={22} color={Colors.primary} />
-            <Text style={styles.toolbarText}>Record Voice Note</Text>
-          </TouchableOpacity>
-        ) : (
-          <View /> // Empty view to push character count to the right if audio exists
-        )}
+
+          {/* AUDIO BUTTON */}
+          {recording ? (
+            <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: '#FF3B30' }]} onPress={stopRecording}>
+              <Square size={20} color="#FFF" fill="#FFF" />
+              <Text style={[styles.toolbarText, { color: '#FFF' }]}>Stop</Text>
+            </TouchableOpacity>
+          ) : !audioUri ? (
+            <TouchableOpacity style={styles.toolbarIconButton} onPress={startRecording}>
+              <Mic size={24} color={Colors.primary} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
         <Text style={styles.charCount}>{content.length}/280</Text>
       </View>
     </KeyboardAvoidingView>
@@ -226,7 +206,7 @@ export default function CreatePostScreen() {
 }
 
 const styles = StyleSheet.create({
-  // ... Keep all your previous styles and add these new ones: ...
+  // ... (Keep existing styles, add these new ones) ...
   container: { flex: 1, backgroundColor: '#151515' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 20 : 40, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
   iconButton: { padding: 8 },
@@ -235,12 +215,14 @@ const styles = StyleSheet.create({
   postButtonText: { color: '#000000', fontWeight: 'bold', fontSize: 16 },
   inputContainer: { flex: 1, padding: 20 },
   textInput: { color: '#FFFFFF', fontSize: 18, lineHeight: 28, textAlignVertical: 'top', minHeight: 100 },
+  
   toolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
-  toolbarButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(204, 255, 0, 0.1)', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20 },
-  toolbarText: { color: Colors.primary, marginLeft: 8, fontWeight: '600' },
+  toolbarLeft: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  toolbarIconButton: { padding: 8, backgroundColor: 'rgba(204, 255, 0, 0.1)', borderRadius: 20 },
+  toolbarButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20 },
+  toolbarText: { marginLeft: 8, fontWeight: '600' },
   charCount: { color: '#555', fontSize: 14 },
   
-  // NEW STYLES FOR AUDIO UI
   recordingActiveContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 59, 48, 0.1)', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, marginTop: 20 },
   redDotPulse: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF3B30', marginRight: 8 },
   recordingTimeText: { color: '#FF3B30', fontWeight: 'bold', fontSize: 16 },
@@ -248,4 +230,9 @@ const styles = StyleSheet.create({
   playButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center' },
   audioDurationText: { color: '#FFF', flex: 1, marginLeft: 12, fontWeight: '500' },
   deleteButton: { padding: 8 },
+
+  // NEW IMAGE STYLES
+  imagePreviewContainer: { marginTop: 16, position: 'relative', alignSelf: 'flex-start' },
+  imagePreview: { width: 200, height: 250, borderRadius: 12 },
+  removeImageButton: { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.6)', padding: 6, borderRadius: 15 },
 });

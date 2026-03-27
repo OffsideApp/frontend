@@ -1,13 +1,13 @@
 // App.tsx
 import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, DarkTheme } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
-import { Ionicons } from "@expo/vector-icons"; // Or your preferred icon set
+import { Ionicons } from "@expo/vector-icons"; 
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -31,14 +31,39 @@ import CreatePostScreen from "./screens/CreatePostScreen";
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+// --- CUSTOM DARK THEME ---
+const AppTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: '#0D0D0D', // Kills the white flash on modal transitions
+    card: '#0D0D0D',       // Kills the white gap under the bottom tabs
+  },
+};
+
 // --- BOTTOM TABS FOR MAIN APP ---
 function HomeTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: "#007BFF", // Replace with your primary color
-        tabBarInactiveTintColor: "gray",
+        tabBarActiveTintColor: "#CCFF00", // Neon Green Active State
+        tabBarInactiveTintColor: "#555555", // Muted Gray Inactive State
+        tabBarStyle: {
+          backgroundColor: '#0D0D0D', 
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(255,255,255,0.05)', 
+          paddingTop: 8,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 8, 
+          height: Platform.OS === 'ios' ? 88 : 68,
+          elevation: 0, 
+          shadowOpacity: 0, 
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+          marginTop: -4,
+        },
         tabBarIcon: ({ color, focused }) => {
           let iconName: any;
           if (route.name === "Feed")
@@ -79,20 +104,20 @@ function NavigationContent() {
 
   if (isFirstLaunch === null) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#007BFF" />
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: '#0D0D0D' }}>
+        <ActivityIndicator size="large" color="#CCFF00" />
       </View>
     );
   }
 
   return (
-    <NavigationContainer>
-      <StatusBar style="auto" />
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+    // Pass the custom Dark Theme here
+    <NavigationContainer theme={AppTheme}>
+      <StatusBar style="light" />
+      <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0D0D0D' } }}>
         {isAuthenticated ? (
           // USER IS LOGGED IN -> Show Main App Flow
           <>
-            {/* Example of condition: If user hasn't selected a club yet */}
             {!user?.hasSelectedClub ? (
               <Stack.Screen name="SelectClub" component={SelectClubScreen} />
             ) : !user?.hasUsername ? (
@@ -132,6 +157,7 @@ function NavigationContent() {
     </NavigationContainer>
   );
 }
+
 const queryClient = new QueryClient();
 
 // --- APP ENTRY POINT ---
@@ -139,7 +165,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
-        <GestureHandlerRootView style={{ flex: 1 }}>
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0D0D0D' }}>
           <NavigationContent />
         </GestureHandlerRootView>
       </SafeAreaProvider>

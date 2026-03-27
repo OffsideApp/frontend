@@ -5,7 +5,9 @@ export class FeedService {
   // 1. Create a Post
   static async createPost(formData: FormData) {
     const response = await api.post('/feed/create-post', formData, {
-      transformRequest: (data) => data,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
     return response.data.data; 
   }

@@ -80,6 +80,7 @@ export default function FeedScreen() {
               time={timeAgo(item.createdAt)} 
               hasAudio={item.hasAudio} 
               audioDuration={item.audioDuration} 
+              audioUrl={item.audioUrl}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -87,10 +88,7 @@ export default function FeedScreen() {
       )}
 
       {/* Sticky Footer */}
-      <StickyFooter 
-        title="Start a Rant" 
-        onPress={() => navigation.navigate("CreatePost")} 
-      />
+      <StickyFooter onPress={() => navigation.navigate("CreatePost")} />
     </View>
   );
 }
