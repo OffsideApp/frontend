@@ -6,6 +6,7 @@ import { Play, Pause, Flame, FlagTriangleRight, MessageSquare, Tv } from 'lucide
 import { Audio } from 'expo-av'; 
 import { CLUBS } from "@/constants/clubs"; 
 import { Colors } from '@/constants/theme';
+import { useFeedQueries } from '@/services/feed/feed.queries';
 
 type FeedCardProps = {
   username: string;
@@ -21,17 +22,19 @@ type FeedCardProps = {
   hasImage?: boolean;
   imageUrl?: string | null;
   onPress?: () => void; 
-  isComment?: boolean; // 👈 NEW: Added the isComment prop
+  isComment?: boolean; 
+  postId: string
 };
 
 export default function FeedCard({ 
   username, club, content, time, hasAudio, audioDuration, audioUrl,
   initialCooks = 0, initialOffsides = 0, commentsCount = 0, hasImage, imageUrl, onPress,
-  isComment = false // 👈 NEW: Defaulted to false so regular posts still show the button
+  isComment = false, postId
 }: FeedCardProps) {
   
   const clubData = CLUBS.find(c => c.name === club);
   const clubLogo = clubData?.logo;
+  const { interactMutation } = useFeedQueries();
 
   const [cooks, setCooks] = useState(initialCooks);
   const [offsides, setOffsides] = useState(initialOffsides);
@@ -78,6 +81,11 @@ export default function FeedCard({
 
   const handleCook = () => {
     Vibration.vibrate(50); 
+    
+    // 🚀 Fire to backend in the background!
+    interactMutation.mutate({ postId, action: 'COOK' });
+
+    // Keep your exact existing optimistic UI logic below!
     if (userAction === 'cooked') {
       setCooks(prev => prev - 1);
       setUserAction(null);
@@ -90,6 +98,11 @@ export default function FeedCard({
 
   const handleOffside = () => {
     Vibration.vibrate(50);
+
+    // 🚀 Fire to backend in the background!
+    interactMutation.mutate({ postId, action: 'OFFSIDE' });
+
+    // Keep your exact existing optimistic UI logic below!
     if (userAction === 'offside') {
       setOffsides(prev => prev - 1);
       setUserAction(null);
@@ -99,7 +112,7 @@ export default function FeedCard({
       setUserAction('offside');
     }
   };
-
+  
   const handleVAR = () => {
     alert("Sent to VAR room for review! (Reported)");
   };

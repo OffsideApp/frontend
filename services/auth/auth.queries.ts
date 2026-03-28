@@ -1,14 +1,15 @@
 // services/auth.queries.ts
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'; // 👈 Added useQueryClient
 import { AuthService } from './auth.service';
 import { Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native'; // 👈 Swapped Expo Router for React Navigation
+import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store/useAuthStore';
 import { ApiError } from '../../types/auth.types';
 
 export const useAuthMutations = () => {
-  const navigation = useNavigation<any>(); // 👈 Hooked up React Navigation
+  const navigation = useNavigation<any>(); 
   const { login, updateUser } = useAuthStore();
+  const queryClient = useQueryClient(); // 👈 Needed to instantly refresh data after an upload/follow
 
   // 1. REGISTER HOOK
   const registerMutation = useMutation({
@@ -18,7 +19,6 @@ export const useAuthMutations = () => {
       Alert.alert("Error", msg);
     },
     onSuccess: (_, variables) => {
-      // Navigate to Verify Email screen, passing the email as a param
       navigation.navigate("Verify", { email: variables.email });
     }
   });
@@ -32,7 +32,7 @@ export const useAuthMutations = () => {
     },
     onSuccess: () => {
       Alert.alert("Success", "Email verified! Please login.");
-      navigation.navigate("Login"); // 👈 Changed to standard route name
+      navigation.navigate("Login"); 
     }
   });
 
@@ -45,10 +45,6 @@ export const useAuthMutations = () => {
     },
     onSuccess: (data) => {
       if (data.data) {
-        // 🚀 THE MAGIC: Saving to Zustand flips `isAuthenticated` to true.
-        // App.tsx will automatically unmount the Auth screens and mount 
-        // SetProfile, SelectClub, or Main Tabs based on the user's data!
-        // No manual navigation needed here!
         login(data.data);
       }
     }
@@ -62,8 +58,6 @@ export const useAuthMutations = () => {
       Alert.alert("Error", msg);
     },
     onSuccess: () => {
-      // 🚀 THE MAGIC: Tell Zustand the club is saved. 
-      // App.tsx automatically pushes them to the next relevant screen!
       updateUser({ hasSelectedClub: true });
     }
   });
@@ -76,13 +70,64 @@ export const useAuthMutations = () => {
       Alert.alert("Error", msg);
     },
     onSuccess: () => {
-      // 🚀 THE MAGIC: Tell Zustand the user now has a username.
-      // App.tsx automatically pushes them to the next relevant screen!
       if (updateUser) {
          updateUser({ hasUsername: true });
       }
     }
   });
 
-  return { registerMutation, verifyMutation, loginMutation, selectClubMutation, setProfileMutation };
+  // ==========================================
+  // 🚀 NEW: PROFILE, AVATAR, & FOLLOW HOOKS
+  // ==========================================
+
+  // 6. FETCH PROFILE HOOK (Query instead of Mutation)
+  const UseprofileQuery = (username?: string) => useQuery({
+    queryKey: ['profile', username || 'me'], // Unique cache key
+    queryFn: () => AuthService.getProfile(username),
+  });
+
+  // 7. UPLOAD AVATAR HOOK
+  const uploadAvatarMutation = useMutation({
+    mutationFn: (formData: FormData) => AuthService.uploadAvatar(formData),
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || "Failed to upload avatar";
+      Alert.alert("Upload Error", msg);
+    },
+    onSuccess: () => {
+      // 🚀 Instantly clear the cache so the ProfileScreen fetches the new image!
+      queryClient.invalidateQueries({ queryKey: ['profile', 'me'] });
+    },
+  });
+
+  // 8. TOGGLE FOLLOW HOOK
+  const followMutation = useMutation({
+    mutationFn: (targetUserId: string) => AuthService.toggleFollow(targetUserId),
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || "Failed to follow user";
+      Alert.alert("Error", msg);
+    },
+    onSuccess: () => {
+      // 🚀 Instantly refresh the profile so the follower count updates!
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
+  });
+
+  // 🚀 Ensure everything is exported here!
+  return { 
+    registerMutation, 
+    verifyMutation, 
+    loginMutation, 
+    selectClubMutation, 
+    setProfileMutation,
+    UseprofileQuery,
+    uploadAvatarMutation,
+    followMutation
+  };
+};
+
+export const useProfileQuery = (username?: string) => {
+  return useQuery({
+    queryKey: ['profile', username || 'me'], 
+    queryFn: () => AuthService.getProfile(username),
+  });
 };

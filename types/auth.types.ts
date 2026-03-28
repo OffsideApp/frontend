@@ -48,11 +48,35 @@ export interface LoginResponse {
   refreshToken: string;
   hasSelectedClub: boolean;
   hasUsername: boolean;
-  avatar: string
-  bio: string
+  username: string | null;
+  club: string | null;
+  avatar: string | null;
+  bio: string | null;
 }
 
 export interface ApiError {
   message: string;
   statusCode?: number;
+}
+
+// types/auth.types.ts
+export interface UserProfileResponse {
+  success: boolean;
+  data: {
+    id: string;
+    username: string;
+    club: string | null;
+    bio: string | null;
+    avatar: string | null;
+    reputation: number;
+    createdAt: string;
+    _count: {
+      followers: number;
+      following: number;
+    };
+    clout: {
+      totalCooks: number;
+      totalOffsides: number;
+    };
+  };
 }

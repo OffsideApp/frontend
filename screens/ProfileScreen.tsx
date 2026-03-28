@@ -9,12 +9,24 @@ import { useAuthStore } from '../store/useAuthStore';
 import { Colors } from '../constants/theme';
 import { CLUBS } from '../constants/clubs';
 import FeedCard from '../components/FeedCard'; 
+//  THE FIX: Import both hooks here
+import { useAuthMutations, useProfileQuery } from '../services/auth/auth.queries'; // adjust path if needed
 
 const { width } = Dimensions.get('window');
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuthStore();
-  const [isUploading, setIsUploading] = useState(false);
+  const { user, logout, updateUser } = useAuthStore();
+  
+  // 🚀 1. Call the mutations hook
+  const { uploadAvatarMutation } = useAuthMutations();
+  
+  // 🚀 2. Call the query hook directly!
+  const { data: profileResponse, isLoading } = useProfileQuery();
+  
+  // Extract the real data
+  const realProfile = profileResponse?.data;
+
+  // Local state just for instant image preview before it finishes uploading
   const [localAvatar, setLocalAvatar] = useState<string | null>(user?.avatar || null);
 
   const clubData = CLUBS.find(c => c.name === user?.club);
@@ -34,25 +46,36 @@ export default function ProfileScreen() {
     });
 
     if (!result.canceled) {
-      setLocalAvatar(result.assets[0].uri);
-      uploadProfilePicture(result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      setLocalAvatar(uri); // Instant visual update for the user
+
+      const formData = new FormData();
+      formData.append('avatar', {
+        uri: uri,
+        name: 'avatar.jpg',
+        type: 'image/jpeg',
+      } as any);
+
+      uploadAvatarMutation.mutate(formData, {
+        onSuccess: (res) => {
+          if (res.data?.avatar && updateUser) {
+            updateUser({ ...user, avatar: res.data.avatar });
+          }
+        }
+      });
     }
   };
 
-  const uploadProfilePicture = async (uri: string) => {
-    setIsUploading(true);
-    try {
-      // Simulating network request for now
-      setTimeout(() => setIsUploading(false), 1500); 
-    } catch (error) {
-      console.error("Failed to upload avatar", error);
-      setIsUploading(false);
-    }
-  };
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* --- HEADER --- */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
         <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
@@ -62,7 +85,6 @@ export default function ProfileScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
         
-        {/* --- DYNAMIC CLUB BANNER --- */}
         <View style={styles.bannerContainer}>
           {clubData?.logo ? (
             <>
@@ -71,7 +93,6 @@ export default function ProfileScreen() {
                 style={styles.bannerImage} 
                 contentFit="cover" 
               />
-              {/* This overlay darkens the logo so it looks like a sleek watermark */}
               <View style={styles.bannerOverlay} /> 
             </>
           ) : (
@@ -79,7 +100,6 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* --- AVATAR SECTION (Overlapping the banner) --- */}
         <View style={styles.avatarContainer}>
           <TouchableOpacity onPress={pickProfilePicture} activeOpacity={0.8} style={styles.avatarWrapper}>
             {localAvatar ? (
@@ -93,7 +113,7 @@ export default function ProfileScreen() {
             )}
             
             <View style={styles.cameraBadge}>
-              {isUploading ? (
+              {uploadAvatarMutation.isPending ? (
                 <ActivityIndicator size="small" color="#000" />
               ) : (
                 <Camera size={14} color="#000" />
@@ -102,9 +122,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* --- PADDED BODY CONTENT --- */}
         <View style={styles.bodyContent}>
-          {/* --- USER INFO & BIO --- */}
           <View style={styles.infoContainer}>
             <Text style={styles.username}>@{user?.username || "unknown"}</Text>
             <View style={styles.clubBadge}>
@@ -117,27 +135,25 @@ export default function ProfileScreen() {
             </Text>
           </View>
 
-          {/* --- NETWORK STATS --- */}
           <View style={styles.networkRow}>
             <View style={styles.networkItem}>
-              <Text style={styles.networkCount}>1.2k</Text>
+              <Text style={styles.networkCount}>{realProfile?._count?.followers || 0}</Text>
               <Text style={styles.networkLabel}>Followers</Text>
             </View>
             <View style={styles.networkItem}>
-              <Text style={styles.networkCount}>340</Text>
+              <Text style={styles.networkCount}>{realProfile?._count?.following || 0}</Text>
               <Text style={styles.networkLabel}>Following</Text>
             </View>
           </View>
 
-          {/* --- CLOUT STATS --- */}
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
-               <Text style={styles.statNumber}>8.5k</Text>
+               <Text style={styles.statNumber}>{realProfile?.clout?.totalCooks || 0}</Text>
                <Text style={styles.statLabel}>Cooks</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
-               <Text style={styles.statNumber}>12</Text>
+               <Text style={styles.statNumber}>{realProfile?.clout?.totalOffsides || 0}</Text>
                <Text style={styles.statLabel}>Offsides</Text>
             </View>
             <View style={styles.statDivider} />
@@ -150,7 +166,6 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* --- TOP BANGER SECTION --- */}
           <View style={styles.bangerSection}>
             <View style={styles.bangerHeader}>
               <Flame size={20} color={Colors.primary} fill="rgba(204, 255, 0, 0.2)" />
@@ -158,6 +173,7 @@ export default function ProfileScreen() {
             </View>
             
             <FeedCard 
+              postId="pinned-mock-post"
               username={user?.username || "unknown"}
               club={user?.club || "No Club"}
               content="If you think prime Hazard was better than Salah, you need to be investigated by the EFCC. The stats don't lie!"
@@ -182,21 +198,18 @@ const styles = StyleSheet.create({
   headerTitle: { color: 'white', fontSize: 20, fontWeight: 'bold' },
   logoutBtn: { padding: 8, backgroundColor: 'rgba(255, 59, 48, 0.1)', borderRadius: 20 },
   
-  // 🚀 BANTER STYLES
   bannerContainer: { width: width, height: 140, backgroundColor: '#1A1A1A', position: 'relative' },
   bannerImage: { width: '100%', height: '100%', opacity: 0.5 },
-  bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(13, 13, 13, 0.5)' }, // Fades the logo into the dark background
+  bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(13, 13, 13, 0.5)' }, 
   bannerPlaceholder: { width: '100%', height: '100%', backgroundColor: '#1F1F1F' },
   
-  // 🚀 AVATAR STYLES (Notice the negative marginTop!)
   avatarContainer: { alignItems: 'center', marginTop: -50, zIndex: 10 },
-  avatarWrapper: { position: 'relative', borderRadius: 50, padding: 4, backgroundColor: '#0D0D0D' }, // The padding creates a ring effect cutting into the banner
+  avatarWrapper: { position: 'relative', borderRadius: 50, padding: 4, backgroundColor: '#0D0D0D' }, 
   avatar: { width: 92, height: 92, borderRadius: 46, borderWidth: 2, borderColor: Colors.primary },
   avatarPlaceholder: { width: 92, height: 92, borderRadius: 46, backgroundColor: '#333', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#555' },
   avatarInitials: { color: '#FFF', fontSize: 32, fontWeight: 'bold' },
   cameraBadge: { position: 'absolute', bottom: 4, right: 0, backgroundColor: Colors.primary, width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#0D0D0D' },
   
-  // 🚀 BODY STYLES
   bodyContent: { paddingHorizontal: 20 },
   
   infoContainer: { alignItems: 'center', marginTop: 12 },

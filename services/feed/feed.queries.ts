@@ -48,5 +48,12 @@ export const useFeedQueries = (postId?: string) => {
     }
   });
 
-  return { feedQuery, postQuery, createPostMutation, createCommentMutation };
+  const interactMutation = useMutation({
+    mutationFn: (dto: { postId: string; action: 'COOK' | 'OFFSIDE' }) => 
+      FeedService.interactWithPost(dto),
+    // We don't invalidate the feed immediately because we handle the UI optimistically 
+    // inside the FeedCard component for instant visual feedback!
+  });
+
+  return { feedQuery, postQuery, createPostMutation, createCommentMutation, interactMutation };
 };

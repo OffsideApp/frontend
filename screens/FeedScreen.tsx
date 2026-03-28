@@ -84,6 +84,7 @@ export default function FeedScreen() {
               hasImage={item.hasImage}
               imageUrl={item.imageUrl}
               onPress={() => navigation.navigate("PostDetail", { postId: item.id })}
+              postId={item.id}
             />
           )}
           contentContainerStyle={styles.listContent}

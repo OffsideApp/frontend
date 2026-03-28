@@ -29,4 +29,9 @@ export class FeedService {
     });
     return response.data;
   }
+  
+  static async interactWithPost (dto: { postId: string; action: 'COOK' | 'OFFSIDE' })  {
+    const { data } = await api.post('/feed/interact', dto);
+    return data;
+  }
 }

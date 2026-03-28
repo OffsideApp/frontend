@@ -8,7 +8,8 @@ import {
   LoginResponse, 
   RegisterResponse, 
   selectClubDto,
-  SetProfileDto
+  SetProfileDto,
+  UserProfileResponse
 } from '../../types/auth.types';
 
 export const AuthService = {
@@ -33,5 +34,23 @@ export const AuthService = {
   setProfile: async (data: SetProfileDto ) => {
     const response = await api.post<AuthResponse>('/auth/set-profile', data);
     return response.data;
+  },
+  
+  uploadAvatar: async (formData: FormData) => {
+    const { data } = await api.post('/auth/upload-avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+
+  getProfile: async (username?: string): Promise<UserProfileResponse> => {
+    const url = username ? `/auth/profile/${username}` : '/auth/profile';
+    const { data } = await api.get(url);
+    return data;
+  },
+
+  toggleFollow: async (targetUserId: string) => {
+    const { data } = await api.post('/auth/follow', { targetUserId });
+    return data;
   },
 };

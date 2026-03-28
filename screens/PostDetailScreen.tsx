@@ -73,6 +73,7 @@ export default function PostDetailScreen() {
               hasImage={post.hasImage}
               imageUrl={post.imageUrl}
               commentsCount={post.comments?.length || 0}
+              postId={post.id}
             />
             <View style={styles.divider} />
             <Text style={styles.repliesTitle}>Replies</Text>
@@ -91,6 +92,7 @@ export default function PostDetailScreen() {
               hasImage={item.hasImage}
               imageUrl={item.imageUrl}
               isComment={true}
+              postId={item.id}
             />
           </View>
         )}

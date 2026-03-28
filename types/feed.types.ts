@@ -44,3 +44,11 @@ export interface Post {
   };
   comments?: Comment[]; // 👈 NEW
 }
+
+// types/feed.types.ts
+export type InteractionType = 'COOK' | 'OFFSIDE';
+
+export interface InteractDto {
+  postId: string;
+  action: InteractionType;
+}
