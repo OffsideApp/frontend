@@ -31,7 +31,7 @@ export default function CreateCommentScreen() {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const { createCommentMutation } = useFeedQueries();
+  const { createCommentMutation } = useFeedQueries(postId);
 
   useEffect(() => {
     return sound ? () => { sound.unloadAsync(); } : undefined;

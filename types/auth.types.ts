@@ -48,6 +48,8 @@ export interface LoginResponse {
   refreshToken: string;
   hasSelectedClub: boolean;
   hasUsername: boolean;
+  avatar: string
+  bio: string
 }
 
 export interface ApiError {

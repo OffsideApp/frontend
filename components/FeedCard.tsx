@@ -20,13 +20,14 @@ type FeedCardProps = {
   commentsCount?: number;
   hasImage?: boolean;
   imageUrl?: string | null;
-  // 🚀 FIXED: Capital P in onPress
   onPress?: () => void; 
+  isComment?: boolean; // 👈 NEW: Added the isComment prop
 };
 
 export default function FeedCard({ 
   username, club, content, time, hasAudio, audioDuration, audioUrl,
-  initialCooks = 0, initialOffsides = 0, commentsCount = 0, hasImage, imageUrl, onPress
+  initialCooks = 0, initialOffsides = 0, commentsCount = 0, hasImage, imageUrl, onPress,
+  isComment = false // 👈 NEW: Defaulted to false so regular posts still show the button
 }: FeedCardProps) {
   
   const clubData = CLUBS.find(c => c.name === club);
@@ -104,8 +105,6 @@ export default function FeedCard({
   };
 
   return (
-    // 🚀 FIXED: Changed <View> to <TouchableOpacity> and attached the onPress prop!
-    // We also disable the click if no onPress is passed (so replies aren't clickable)
     <TouchableOpacity 
       style={styles.card} 
       onPress={onPress} 
@@ -185,13 +184,15 @@ export default function FeedCard({
             </Text>
           </TouchableOpacity>
 
-          {/* 🚀 BANTER BUTTON ALSO TRIGGERS THE THREAD */}
-          <TouchableOpacity style={styles.actionButton} onPress={onPress}>
-            <MessageSquare size={20} color="#A1A1A1" />
-            <Text style={styles.actionText}>
-              {commentsCount > 0 ? commentsCount : 'Banter'}
-            </Text>
-          </TouchableOpacity>
+          {/* 🚀 HIDDEN IF IT IS A COMMENT */}
+          {!isComment && (
+            <TouchableOpacity style={styles.actionButton} onPress={onPress}>
+              <MessageSquare size={20} color="#A1A1A1" />
+              <Text style={styles.actionText}>
+                {commentsCount > 0 ? commentsCount : 'Banter'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <TouchableOpacity onPress={handleVAR}>

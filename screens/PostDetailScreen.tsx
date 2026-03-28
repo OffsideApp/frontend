@@ -8,7 +8,6 @@ import { Colors } from '../constants/theme';
 import FeedCard from '../components/FeedCard';
 import { useFeedQueries } from '../services/feed/feed.queries';
 
-// Quick helper to format dates (you can move this to a utils folder later)
 const timeAgo = (dateString: string) => {
   const date = new Date(dateString);
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
@@ -19,7 +18,6 @@ export default function PostDetailScreen() {
   const navigation = useNavigation<any>();
   const { postId } = route.params;
 
-  // Fetch the thread!
   const { postQuery } = useFeedQueries(postId);
 
   if (postQuery.isLoading) {
@@ -30,11 +28,25 @@ export default function PostDetailScreen() {
     );
   }
 
-  const post = postQuery.data?.data;
+  // 🚀 SAFETY CHECK: If the post was deleted or network drops
+  if (postQuery.isError || !postQuery.data?.data) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
+            <ArrowLeft color="white" size={24} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Thread Not Found</Text>
+          <View style={{ width: 40 }} /> 
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const post = postQuery.data.data;
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
           <ArrowLeft color="white" size={24} />
@@ -48,30 +60,26 @@ export default function PostDetailScreen() {
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
-        // 👇 The Main Post goes at the very top of the list!
         ListHeaderComponent={
-          post ? (
-            <View style={{ marginBottom: 20 }}>
-              <FeedCard
-                username={post.author.username}
-                club={post.author.club}
-                content={post.content}
-                time={timeAgo(post.createdAt)}
-                hasAudio={post.hasAudio}
-                audioUrl={post.audioUrl}
-                audioDuration={post.audioDuration}
-                hasImage={post.hasImage}
-                imageUrl={post.imageUrl}
-                commentsCount={post.comments?.length || 0}
-              />
-              <View style={styles.divider} />
-              <Text style={styles.repliesTitle}>Replies</Text>
-            </View>
-          ) : null
+          <View style={{ marginBottom: 20 }}>
+            <FeedCard
+              username={post.author.username}
+              club={post.author.club}
+              content={post.content}
+              time={timeAgo(post.createdAt)}
+              hasAudio={post.hasAudio}
+              audioUrl={post.audioUrl}
+              audioDuration={post.audioDuration}
+              hasImage={post.hasImage}
+              imageUrl={post.imageUrl}
+              commentsCount={post.comments?.length || 0}
+            />
+            <View style={styles.divider} />
+            <Text style={styles.repliesTitle}>Replies</Text>
+          </View>
         }
-        // 👇 The Comments render exactly like posts using FeedCard!
         renderItem={({ item }) => (
-          <View style={{ marginLeft: 20 }}> {/* Indent replies slightly! */}
+          <View style={{ marginLeft: 20 }}>
             <FeedCard
               username={item.author.username}
               club={item.author.club || "Unknown"}
@@ -82,6 +90,7 @@ export default function PostDetailScreen() {
               audioDuration={item.audioDuration}
               hasImage={item.hasImage}
               imageUrl={item.imageUrl}
+              isComment={true}
             />
           </View>
         )}
@@ -90,7 +99,6 @@ export default function PostDetailScreen() {
         }
       />
 
-      {/* Floating Reply Button */}
       <TouchableOpacity 
         style={styles.fab} 
         activeOpacity={0.8}
