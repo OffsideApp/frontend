@@ -73,18 +73,30 @@ export default function FeedScreen() {
           }
           renderItem={({ item }) => (
             <FeedCard 
-              // Map the nested backend data to your FeedCard props
-              username={item.author?.username || "Unknown"} 
-              club={item.author?.club || "Unknown"} 
+              // 1. Core Post Data
+              postId={item.id}
               content={item.content} 
               time={timeAgo(item.createdAt)} 
+              
+              // 2. Author Data
+              username={item.author?.username || "Unknown"} 
+              club={item.author?.club || "Unknown"} 
+              avatar={item.author?.avatar} 
+              
+              // 3. Media
               hasAudio={item.hasAudio} 
               audioDuration={item.audioDuration} 
               audioUrl={item.audioUrl}
               hasImage={item.hasImage}
               imageUrl={item.imageUrl}
+
+              // 4. 🚀 ADDED REAL STATS FROM DB:
+              initialCooks={item.likesCount || 0}
+              initialOffsides={item.dislikesCount || 0}
+              commentsCount={item.commentsCount || 0}
+
+              // Navigation
               onPress={() => navigation.navigate("PostDetail", { postId: item.id })}
-              postId={item.id}
             />
           )}
           contentContainerStyle={styles.listContent}

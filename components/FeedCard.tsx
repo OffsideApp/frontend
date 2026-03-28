@@ -23,13 +23,14 @@ type FeedCardProps = {
   imageUrl?: string | null;
   onPress?: () => void; 
   isComment?: boolean; 
-  postId: string
+  postId: string;
+  avatar?: string | null; // 👈 Received the avatar prop
 };
 
 export default function FeedCard({ 
   username, club, content, time, hasAudio, audioDuration, audioUrl,
   initialCooks = 0, initialOffsides = 0, commentsCount = 0, hasImage, imageUrl, onPress,
-  isComment = false, postId
+  isComment = false, postId, avatar
 }: FeedCardProps) {
   
   const clubData = CLUBS.find(c => c.name === club);
@@ -82,10 +83,8 @@ export default function FeedCard({
   const handleCook = () => {
     Vibration.vibrate(50); 
     
-    // 🚀 Fire to backend in the background!
     interactMutation.mutate({ postId, action: 'COOK' });
 
-    // Keep your exact existing optimistic UI logic below!
     if (userAction === 'cooked') {
       setCooks(prev => prev - 1);
       setUserAction(null);
@@ -99,10 +98,8 @@ export default function FeedCard({
   const handleOffside = () => {
     Vibration.vibrate(50);
 
-    // 🚀 Fire to backend in the background!
     interactMutation.mutate({ postId, action: 'OFFSIDE' });
 
-    // Keep your exact existing optimistic UI logic below!
     if (userAction === 'offside') {
       setOffsides(prev => prev - 1);
       setUserAction(null);
@@ -112,7 +109,7 @@ export default function FeedCard({
       setUserAction('offside');
     }
   };
-  
+
   const handleVAR = () => {
     alert("Sent to VAR room for review! (Reported)");
   };
@@ -125,7 +122,18 @@ export default function FeedCard({
       disabled={!onPress} 
     >
       <View style={styles.headerRow}>
-        <View style={styles.avatar} />
+        
+        {/* 🚀 THE FIX: Render the Avatar Image or a Placeholder! */}
+        {avatar ? (
+          <Image source={{ uri: avatar }} style={styles.avatar} contentFit="cover" />
+        ) : (
+          <View style={styles.avatarPlaceholder}>
+            <Text style={styles.avatarInitials}>
+              {username ? username.substring(0, 2).toUpperCase() : "?"}
+            </Text>
+          </View>
+        )}
+
         <View>
           <View style={styles.userInfo}>
             <Text style={styles.username}>{username}</Text>
@@ -197,7 +205,6 @@ export default function FeedCard({
             </Text>
           </TouchableOpacity>
 
-          {/* 🚀 HIDDEN IF IT IS A COMMENT */}
           {!isComment && (
             <TouchableOpacity style={styles.actionButton} onPress={onPress}>
               <MessageSquare size={20} color="#A1A1A1" />
@@ -219,7 +226,12 @@ export default function FeedCard({
 const styles = StyleSheet.create({
   card: { backgroundColor: '#1F1F1F', borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#333', marginRight: 12 },
+  
+  // 🚀 Updated Avatar Styles
+  avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
+  avatarPlaceholder: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#333', marginRight: 12, justifyContent: 'center', alignItems: 'center' },
+  avatarInitials: { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
+  
   userInfo: { flexDirection: 'row', alignItems: 'center' },
   username: { color: 'white', fontWeight: 'bold', fontSize: 16, marginRight: 8 },
   clubLogo: { width: 18, height: 18, marginRight: 6 },

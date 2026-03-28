@@ -5,30 +5,27 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, LogOut, Trophy, Flame } from 'lucide-react-native';
-import { useAuthStore } from '../store/useAuthStore';
 import { Colors } from '../constants/theme';
 import { CLUBS } from '../constants/clubs';
 import FeedCard from '../components/FeedCard'; 
-//  THE FIX: Import both hooks here
-import { useAuthMutations, useProfileQuery } from '../services/auth/auth.queries'; // adjust path if needed
+import { useAuthMutations } from '../services/auth/auth.queries'; 
+import { useCurrentUser } from '../hooks/useCurrentUser'; // 🚀 BOOM! The global hook.
+import { useAuthStore } from '../store/useAuthStore';
 
 const { width } = Dimensions.get('window');
 
 export default function ProfileScreen() {
-  const { user, logout, updateUser } = useAuthStore();
-  
-  // 🚀 1. Call the mutations hook
+  // 1. We just need the logout action from Zustand now
+  const { logout } = useAuthStore();
+  // 2. We need the mutation to actually send the picture to the backend
   const { uploadAvatarMutation } = useAuthMutations();
-  
-  // 🚀 2. Call the query hook directly!
-  const { data: profileResponse, isLoading } = useProfileQuery();
-  
-  // Extract the real data
-  const realProfile = profileResponse?.data;
+  // 3. 🚀 THE MAGIC HOOK: This gives us the perfect, auto-updating user object
+  const { user, isLoading } = useCurrentUser(); 
+  // Local state just for instant image preview before the network request finishes
+  const [localAvatar, setLocalAvatar] = useState<string | null>(null);
 
-  // Local state just for instant image preview before it finishes uploading
-  const [localAvatar, setLocalAvatar] = useState<string | null>(user?.avatar || null);
-
+  // Simple lookups using the guaranteed data from our hook
+  const displayAvatar = localAvatar || user?.avatar;
   const clubData = CLUBS.find(c => c.name === user?.club);
 
   const pickProfilePicture = async () => {
@@ -47,7 +44,7 @@ export default function ProfileScreen() {
 
     if (!result.canceled) {
       const uri = result.assets[0].uri;
-      setLocalAvatar(uri); // Instant visual update for the user
+      setLocalAvatar(uri); // Instant visual update
 
       const formData = new FormData();
       formData.append('avatar', {
@@ -56,17 +53,15 @@ export default function ProfileScreen() {
         type: 'image/jpeg',
       } as any);
 
-      uploadAvatarMutation.mutate(formData, {
-        onSuccess: (res) => {
-          if (res.data?.avatar && updateUser) {
-            updateUser({ ...user, avatar: res.data.avatar });
-          }
-        }
-      });
+      // The hook handles the Zustand update automatically on success now, 
+      // so we just fire the mutation and let React Query invalidate the cache!
+      uploadAvatarMutation.mutate(formData);
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !user?.username) {
+    // Only show the massive loading spinner if we literally have NO local data
+    // (This prevents the annoying flash when they already have cached data)
     return (
       <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -102,8 +97,8 @@ export default function ProfileScreen() {
 
         <View style={styles.avatarContainer}>
           <TouchableOpacity onPress={pickProfilePicture} activeOpacity={0.8} style={styles.avatarWrapper}>
-            {localAvatar ? (
-              <Image source={{ uri: localAvatar }} style={styles.avatar} contentFit="cover" />
+            {displayAvatar ? (
+              <Image source={{ uri: displayAvatar }} style={styles.avatar} contentFit="cover" />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarInitials}>
@@ -137,23 +132,25 @@ export default function ProfileScreen() {
 
           <View style={styles.networkRow}>
             <View style={styles.networkItem}>
-              <Text style={styles.networkCount}>{realProfile?._count?.followers || 0}</Text>
+              {/* Because of our hook, _count is now directly on the user object! */}
+              <Text style={styles.networkCount}>{user?._count?.followers || 0}</Text>
               <Text style={styles.networkLabel}>Followers</Text>
             </View>
             <View style={styles.networkItem}>
-              <Text style={styles.networkCount}>{realProfile?._count?.following || 0}</Text>
+              <Text style={styles.networkCount}>{user?._count?.following || 0}</Text>
               <Text style={styles.networkLabel}>Following</Text>
             </View>
           </View>
 
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
-               <Text style={styles.statNumber}>{realProfile?.clout?.totalCooks || 0}</Text>
+               {/* Because of our hook, clout is now directly on the user object! */}
+               <Text style={styles.statNumber}>{user?.clout?.totalCooks || 0}</Text>
                <Text style={styles.statLabel}>Cooks</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
-               <Text style={styles.statNumber}>{realProfile?.clout?.totalOffsides || 0}</Text>
+               <Text style={styles.statNumber}>{user?.clout?.totalOffsides || 0}</Text>
                <Text style={styles.statLabel}>Offsides</Text>
             </View>
             <View style={styles.statDivider} />
@@ -176,6 +173,7 @@ export default function ProfileScreen() {
               postId="pinned-mock-post"
               username={user?.username || "unknown"}
               club={user?.club || "No Club"}
+              avatar={user?.avatar}
               content="If you think prime Hazard was better than Salah, you need to be investigated by the EFCC. The stats don't lie!"
               time="Pinned"
               initialCooks={1420}
@@ -193,6 +191,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  // ... all your exact same styles ...
   container: { flex: 1, backgroundColor: '#0D0D0D' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 15, paddingTop: 10, zIndex: 10, backgroundColor: '#0D0D0D' },
   headerTitle: { color: 'white', fontSize: 20, fontWeight: 'bold' },

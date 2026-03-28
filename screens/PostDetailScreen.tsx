@@ -74,6 +74,7 @@ export default function PostDetailScreen() {
               imageUrl={post.imageUrl}
               commentsCount={post.comments?.length || 0}
               postId={post.id}
+              avatar={post.avatar}
             />
             <View style={styles.divider} />
             <Text style={styles.repliesTitle}>Replies</Text>
@@ -93,6 +94,7 @@ export default function PostDetailScreen() {
               imageUrl={item.imageUrl}
               isComment={true}
               postId={item.id}
+              avatar={item.author?.avatar}
             />
           </View>
         )}
