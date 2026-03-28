@@ -1,8 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FeedService} from './feed.service';
 import { CreatePostPayload } from '../../types/feed.types';
+import { Alert } from 'react-native';
 
-export const useFeedQueries = () => {
+
+// We now accept an optional postId so we can fetch a specific thread!
+export const useFeedQueries = (postId?: string) => {
   const queryClient = useQueryClient();
 
   // 1. Hook to fetch the feed
@@ -15,15 +18,35 @@ export const useFeedQueries = () => {
       refetchIntervalInBackground: false,
   });
 
-  // 2. Hook to create a post
-  const createPostMutation = useMutation({
-    mutationFn: (data: FormData) => FeedService.createPost(data),
-    onSuccess: () => {
-      // Instantly refresh the feed when a new post is successfully created!
-      queryClient.invalidateQueries({ queryKey: ['feed'] });
-      
-    },
+  // 👇 NEW: Fetch a single post & its comments
+  const postQuery = useQuery({
+    queryKey: ['post', postId],
+    queryFn: () => FeedService.getPost(postId!),
+    enabled: !!postId, // Only run this if a postId was passed in
   });
 
-  return { feedQuery, createPostMutation };
+  const createPostMutation = useMutation({
+    mutationFn: FeedService.createPost,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feed'] });
+    },
+    onError: (error: any) => {
+      Alert.alert("Error", error.response?.data?.message || "Failed to create post");
+    }
+  });
+
+  //  NEW: Create a comment mutation
+  const createCommentMutation = useMutation({
+    mutationFn: FeedService.createComment,
+    onSuccess: () => {
+      // Refresh both the main feed AND the specific thread we are looking at
+      queryClient.invalidateQueries({ queryKey: ['feed'] });
+      queryClient.invalidateQueries({ queryKey: ['post', postId] });
+    },
+    onError: (error: any) => {
+      Alert.alert("Error", error.response?.data?.message || "Failed to post reply");
+    }
+  });
+
+  return { feedQuery, postQuery, createPostMutation, createCommentMutation };
 };

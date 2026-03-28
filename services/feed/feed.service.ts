@@ -17,4 +17,16 @@ export class FeedService {
     const response = await api.get(`/feed/get-feed?limit=${limit}&offset=${offset}`);
     return response.data.data;
   }
+
+  static async getPost(postId: string) {
+    const response = await api.get(`/feed/get-post/${postId}`);
+    return response.data; 
+  }
+  
+  static async createComment(data: FormData)  {
+    const response = await api.post('/feed/comment', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
 }

@@ -83,6 +83,7 @@ export default function FeedScreen() {
               audioUrl={item.audioUrl}
               hasImage={item.hasImage}
               imageUrl={item.imageUrl}
+              onPress={() => navigation.navigate("PostDetail", { postId: item.id })}
             />
           )}
           contentContainerStyle={styles.listContent}

@@ -27,6 +27,8 @@ import SetProfileScreen from "./screens/SelectProfileScreen";
 import VerifyScreen from "./screens/VerifyScreen";
 import MatchdayScreen from "./screens/MatchDayScreen";
 import CreatePostScreen from "./screens/CreatePostScreen";
+import PostDetailScreen from "./screens/PostDetailScreen";
+import CreateCommentScreen from "./screens/CreateCommentScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -130,6 +132,15 @@ function NavigationContent() {
                   name="CreatePost"
                   component={CreatePostScreen}
                   options={{ presentation: "modal" }} // Makes it slide up!
+                />
+                <Stack.Screen
+                  name="PostDetail"
+                  component={PostDetailScreen}
+                />
+                <Stack.Screen
+                  name="CreateComment"
+                  component={CreateCommentScreen} // 👈 We will make this next!
+                  options={{ presentation: "modal" }} 
                 />
               </>
             )}

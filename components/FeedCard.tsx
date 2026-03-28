@@ -15,29 +15,27 @@ type FeedCardProps = {
   hasAudio?: boolean;
   audioDuration?: string;
   audioUrl?: string | null;
-  // Let's accept initial counts from the backend, default to 0 if none exist yet
   initialCooks?: number; 
   initialOffsides?: number;
   commentsCount?: number;
   hasImage?: boolean;
   imageUrl?: string | null;
+  // 🚀 FIXED: Capital P in onPress
+  onPress?: () => void; 
 };
 
 export default function FeedCard({ 
   username, club, content, time, hasAudio, audioDuration, audioUrl,
-  initialCooks = 0, initialOffsides = 0, commentsCount = 0, hasImage, imageUrl
+  initialCooks = 0, initialOffsides = 0, commentsCount = 0, hasImage, imageUrl, onPress
 }: FeedCardProps) {
   
   const clubData = CLUBS.find(c => c.name === club);
   const clubLogo = clubData?.logo;
 
-  // --- INTERACTION STATES ---
-  // We use local state so the UI updates instantly without waiting for the database
   const [cooks, setCooks] = useState(initialCooks);
   const [offsides, setOffsides] = useState(initialOffsides);
   const [userAction, setUserAction] = useState<'cooked' | 'offside' | null>(null);
 
-  // --- AUDIO STATES ---
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -45,7 +43,6 @@ export default function FeedCard({
     return sound ? () => { sound.unloadAsync(); } : undefined;
   }, [sound]);
 
-  // --- AUDIO LOGIC ---
   async function togglePlay() {
     if (!audioUrl) return;
     try {
@@ -78,35 +75,28 @@ export default function FeedCard({
     }
   }
 
-  // --- INTERACTION LOGIC ---
   const handleCook = () => {
-    Vibration.vibrate(50); // Little haptic feedback!
+    Vibration.vibrate(50); 
     if (userAction === 'cooked') {
-      // Undo the Cook
       setCooks(prev => prev - 1);
       setUserAction(null);
     } else {
-      // Cook it! (And remove offside if they had it clicked)
       setCooks(prev => prev + 1);
       if (userAction === 'offside') setOffsides(prev => prev - 1);
       setUserAction('cooked');
     }
-    // TODO: Fire API call to backend here (e.g., feedMutation.mutate({ postId, action: 'cook' }))
   };
 
   const handleOffside = () => {
     Vibration.vibrate(50);
     if (userAction === 'offside') {
-      // Undo the Offside
       setOffsides(prev => prev - 1);
       setUserAction(null);
     } else {
-      // Call it Offside! (And remove cook if they had it clicked)
       setOffsides(prev => prev + 1);
       if (userAction === 'cooked') setCooks(prev => prev - 1);
       setUserAction('offside');
     }
-    // TODO: Fire API call to backend here
   };
 
   const handleVAR = () => {
@@ -114,7 +104,14 @@ export default function FeedCard({
   };
 
   return (
-    <View style={styles.card}>
+    // 🚀 FIXED: Changed <View> to <TouchableOpacity> and attached the onPress prop!
+    // We also disable the click if no onPress is passed (so replies aren't clickable)
+    <TouchableOpacity 
+      style={styles.card} 
+      onPress={onPress} 
+      activeOpacity={0.9}
+      disabled={!onPress} 
+    >
       <View style={styles.headerRow}>
         <View style={styles.avatar} />
         <View>
@@ -132,7 +129,6 @@ export default function FeedCard({
 
       {content ? <Text style={styles.content}>{content}</Text> : null}
 
-      {/* 🚀 NEW: Render the Image if it exists */}
       {hasImage && imageUrl && (
         <Image 
           source={{ uri: imageUrl }} 
@@ -164,11 +160,9 @@ export default function FeedCard({
         </TouchableOpacity>
       )}
 
-      {/* --- NEW THEMED FOOTER --- */}
       <View style={styles.footer}>
         <View style={styles.interactionGroup}>
           
-          {/* 🔥 COOKED (LIKE) BUTTON */}
           <TouchableOpacity style={styles.actionButton} onPress={handleCook}>
             <Flame 
               size={20} 
@@ -180,7 +174,6 @@ export default function FeedCard({
             </Text>
           </TouchableOpacity>
 
-          {/* 🚩 OFFSIDE (DISLIKE) BUTTON */}
           <TouchableOpacity style={styles.actionButton} onPress={handleOffside}>
             <FlagTriangleRight 
               size={20} 
@@ -192,8 +185,8 @@ export default function FeedCard({
             </Text>
           </TouchableOpacity>
 
-          {/* 💬 BANTER (COMMENT) BUTTON */}
-          <TouchableOpacity style={styles.actionButton}>
+          {/* 🚀 BANTER BUTTON ALSO TRIGGERS THE THREAD */}
+          <TouchableOpacity style={styles.actionButton} onPress={onPress}>
             <MessageSquare size={20} color="#A1A1A1" />
             <Text style={styles.actionText}>
               {commentsCount > 0 ? commentsCount : 'Banter'}
@@ -201,12 +194,11 @@ export default function FeedCard({
           </TouchableOpacity>
         </View>
 
-        {/* 📺 VAR (REPORT) BUTTON */}
         <TouchableOpacity onPress={handleVAR}>
           <Tv size={20} color="#A1A1A1" />
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -229,7 +221,7 @@ const styles = StyleSheet.create({
   duration: { color: '#A1A1A1', fontSize: 12, fontWeight: '600' },
   
   footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
-  interactionGroup: { flexDirection: 'row', alignItems: 'center', gap: 20 }, // Spaces out the buttons nicely
+  interactionGroup: { flexDirection: 'row', alignItems: 'center', gap: 20 }, 
   actionButton: { flexDirection: 'row', alignItems: 'center' },
   actionText: { color: '#A1A1A1', fontSize: 14, marginLeft: 6 },
   postImage: { width: '100%', height: 250, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
