@@ -94,6 +94,12 @@ export default function FeedScreen() {
               commentsCount={item.commentsCount || 0}
               // Navigation
               onPress={() => navigation.navigate("PostDetail", { postId: item.id })}
+              // 🚀 NEW: Navigate to the Profile Screen with their username!
+              onAvatarPress={() => {
+                if (item.author?.username) {
+                  navigation.navigate("UserProfile", { username: item.author.username });
+                }
+              }}
             />
           )}
           contentContainerStyle={styles.listContent}

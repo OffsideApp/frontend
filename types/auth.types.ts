@@ -63,13 +63,14 @@ export interface ApiError {
 export interface UserProfileResponse {
   success: boolean;
   data: {
-    id: string;
+    id: string | null | undefined;
     username: string;
     club: string | null;
     bio: string | null;
     avatar: string | null;
     reputation: number;
     createdAt: string;
+    isFollowing?: boolean;
     _count: {
       followers: number;
       following: number;

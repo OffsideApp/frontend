@@ -75,6 +75,7 @@ export default function PostDetailScreen() {
               commentsCount={post.comments?.length || 0}
               postId={post.id}
               avatar={post.avatar}
+              showFollowButton={true}
             />
             <View style={styles.divider} />
             <Text style={styles.repliesTitle}>Replies</Text>

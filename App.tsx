@@ -29,6 +29,7 @@ import MatchdayScreen from "./screens/MatchDayScreen";
 import CreatePostScreen from "./screens/CreatePostScreen";
 import PostDetailScreen from "./screens/PostDetailScreen";
 import CreateCommentScreen from "./screens/CreateCommentScreen";
+import UserProfileScreen from "./screens/UserProfileScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -141,6 +142,11 @@ function NavigationContent() {
                   name="CreateComment"
                   component={CreateCommentScreen} // 👈 We will make this next!
                   options={{ presentation: "modal" }} 
+                />
+                <Stack.Screen
+                  name="UserProfile"
+                  component={UserProfileScreen} // 👈 We will make this next!
+                  
                 />
               </>
             )}

@@ -27,13 +27,15 @@ type FeedCardProps = {
   isComment?: boolean; 
   postId: string;
   avatar?: string | null;
-  authorId?: string; // 🚀 NEW: We need to know who wrote it to follow them!
+  authorId?: string; 
+  showFollowButton?: boolean; 
+  onAvatarPress?: () => void;
 };
 
 export default function FeedCard({ 
   username, club, content, time, hasAudio, audioDuration, audioUrl,
   initialCooks = 0, initialOffsides = 0, commentsCount = 0, hasImage, imageUrl, onPress,
-  isComment = false, postId, avatar, authorId
+  isComment = false, postId, avatar, authorId, showFollowButton =false, onAvatarPress
 }: FeedCardProps) {
   
   const clubData = CLUBS.find(c => c.name === club);
@@ -141,40 +143,40 @@ export default function FeedCard({
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9} disabled={!onPress}>
       <View style={styles.headerRow}>
         
-        {avatar ? (
-          <Image source={{ uri: avatar }} style={styles.avatar} contentFit="cover" />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarInitials}>
-              {username ? username.substring(0, 2).toUpperCase() : "?"}
-            </Text>
-          </View>
-        )}
-
-        {/* Added flex: 1 to push the follow button to the far right */}
-        <View style={{ flex: 1 }}> 
-          <View style={styles.userInfo}>
-            <Text style={styles.username}>{username}</Text>
-            <View>
-               {clubLogo ? (
-                 <Image source={{ uri: clubLogo }} style={styles.clubLogo} contentFit="contain" transition={200}/>
-               ) : null}
+        {/* 🚀 THE FIX: Wrapped the Avatar & Username in a TouchableOpacity */}
+        <TouchableOpacity 
+          style={{ flexDirection: 'row', flex: 1, alignItems: 'center' }} 
+          onPress={onAvatarPress} 
+          activeOpacity={0.7}
+          disabled={!onAvatarPress}
+        >
+          {avatar ? (
+            <Image source={{ uri: avatar }} style={styles.avatar} contentFit="cover" />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.avatarInitials}>
+                {username ? username.substring(0, 2).toUpperCase() : "?"}
+              </Text>
             </View>
-          </View>
-          <Text style={styles.timestamp}>{time}</Text>
-        </View>
+          )}
 
-        {/* 🚀 THE FOLLOW BUTTON */}
-        {!isMyPost && authorId && !isComment && (
-          <TouchableOpacity 
-            style={[styles.followBtn, isFollowingLocal && styles.followingBtn]} 
-            onPress={handleFollow}
-          >
-            {isFollowingLocal ? (
-              <UserCheck size={14} color="#A1A1A1" />
-            ) : (
-              <UserPlus size={14} color="#000" />
-            )}
+          <View style={{ flex: 1 }}> 
+            <View style={styles.userInfo}>
+              <Text style={styles.username}>{username}</Text>
+              <View>
+                 {clubLogo ? (
+                   <Image source={{ uri: clubLogo }} style={styles.clubLogo} contentFit="contain" transition={200}/>
+                 ) : null}
+              </View>
+            </View>
+            <Text style={styles.timestamp}>{time}</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* 🚀 HIDDEN UNLESS showFollowButton IS TRUE */}
+        {showFollowButton && !isMyPost && authorId && !isComment && (
+          <TouchableOpacity style={[styles.followBtn, isFollowingLocal && styles.followingBtn]} onPress={handleFollow}>
+            {isFollowingLocal ? <UserCheck size={14} color="#A1A1A1" /> : <UserPlus size={14} color="#000" />}
             <Text style={[styles.followBtnText, isFollowingLocal && styles.followingBtnText]}>
               {isFollowingLocal ? "Following" : "Follow"}
             </Text>
