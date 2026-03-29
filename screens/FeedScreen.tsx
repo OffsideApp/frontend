@@ -77,24 +77,21 @@ export default function FeedScreen() {
               postId={item.id}
               content={item.content} 
               time={timeAgo(item.createdAt)} 
-              
+              authorId={item.author?.id || item.authorId}
               // 2. Author Data
               username={item.author?.username || "Unknown"} 
               club={item.author?.club || "Unknown"} 
               avatar={item.author?.avatar} 
-              
               // 3. Media
               hasAudio={item.hasAudio} 
               audioDuration={item.audioDuration} 
               audioUrl={item.audioUrl}
               hasImage={item.hasImage}
               imageUrl={item.imageUrl}
-
-              // 4. 🚀 ADDED REAL STATS FROM DB:
+              //ADDED REAL STATS FROM DB:
               initialCooks={item.likesCount || 0}
               initialOffsides={item.dislikesCount || 0}
               commentsCount={item.commentsCount || 0}
-
               // Navigation
               onPress={() => navigation.navigate("PostDetail", { postId: item.id })}
             />

@@ -2,11 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Vibration } from 'react-native';
 import { Image } from 'expo-image';
-import { Play, Pause, Flame, FlagTriangleRight, MessageSquare, Tv } from 'lucide-react-native';
+import { Play, Pause, Flame, FlagTriangleRight, MessageSquare, Tv, UserPlus, UserCheck } from 'lucide-react-native'; // 🚀 Added User Icons
 import { Audio } from 'expo-av'; 
 import { CLUBS } from "@/constants/clubs"; 
 import { Colors } from '@/constants/theme';
 import { useFeedQueries } from '@/services/feed/feed.queries';
+import { useAuthMutations } from '@/services/auth/auth.queries'; // 🚀 Brought in Follow logic
+import { useAuthStore } from '@/store/useAuthStore'; // 🚀 Brought in global state
 
 type FeedCardProps = {
   username: string;
@@ -24,25 +26,36 @@ type FeedCardProps = {
   onPress?: () => void; 
   isComment?: boolean; 
   postId: string;
-  avatar?: string | null; // 👈 Received the avatar prop
+  avatar?: string | null;
+  authorId?: string; // 🚀 NEW: We need to know who wrote it to follow them!
 };
 
 export default function FeedCard({ 
   username, club, content, time, hasAudio, audioDuration, audioUrl,
   initialCooks = 0, initialOffsides = 0, commentsCount = 0, hasImage, imageUrl, onPress,
-  isComment = false, postId, avatar
+  isComment = false, postId, avatar, authorId
 }: FeedCardProps) {
   
   const clubData = CLUBS.find(c => c.name === club);
   const clubLogo = clubData?.logo;
+  
+  // 🚀 Hooks
   const { interactMutation } = useFeedQueries();
+  const { followMutation } = useAuthMutations();
+  const { user } = useAuthStore();
 
   const [cooks, setCooks] = useState(initialCooks);
   const [offsides, setOffsides] = useState(initialOffsides);
   const [userAction, setUserAction] = useState<'cooked' | 'offside' | null>(null);
 
+  // 🚀 Local state for instant UI feedback on the Follow button
+  const [isFollowingLocal, setIsFollowingLocal] = useState(false);
+
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // Check if the logged-in user wrote this post
+  const isMyPost = user?.userId === authorId; 
 
   useEffect(() => {
     return sound ? () => { sound.unloadAsync(); } : undefined;
@@ -80,9 +93,20 @@ export default function FeedCard({
     }
   }
 
+  // 🚀 FOLLOW HANDLER
+  const handleFollow = () => {
+    if (!authorId) return;
+    Vibration.vibrate(50);
+    
+    // Optimistic UI: instantly turn the button grey
+    setIsFollowingLocal(!isFollowingLocal); 
+    
+    // Fire to backend silently
+    followMutation.mutate(authorId);
+  };
+
   const handleCook = () => {
     Vibration.vibrate(50); 
-    
     interactMutation.mutate({ postId, action: 'COOK' });
 
     if (userAction === 'cooked') {
@@ -97,7 +121,6 @@ export default function FeedCard({
 
   const handleOffside = () => {
     Vibration.vibrate(50);
-
     interactMutation.mutate({ postId, action: 'OFFSIDE' });
 
     if (userAction === 'offside') {
@@ -115,15 +138,9 @@ export default function FeedCard({
   };
 
   return (
-    <TouchableOpacity 
-      style={styles.card} 
-      onPress={onPress} 
-      activeOpacity={0.9}
-      disabled={!onPress} 
-    >
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9} disabled={!onPress}>
       <View style={styles.headerRow}>
         
-        {/* 🚀 THE FIX: Render the Avatar Image or a Placeholder! */}
         {avatar ? (
           <Image source={{ uri: avatar }} style={styles.avatar} contentFit="cover" />
         ) : (
@@ -134,7 +151,8 @@ export default function FeedCard({
           </View>
         )}
 
-        <View>
+        {/* Added flex: 1 to push the follow button to the far right */}
+        <View style={{ flex: 1 }}> 
           <View style={styles.userInfo}>
             <Text style={styles.username}>{username}</Text>
             <View>
@@ -145,31 +163,35 @@ export default function FeedCard({
           </View>
           <Text style={styles.timestamp}>{time}</Text>
         </View>
+
+        {/* 🚀 THE FOLLOW BUTTON */}
+        {!isMyPost && authorId && !isComment && (
+          <TouchableOpacity 
+            style={[styles.followBtn, isFollowingLocal && styles.followingBtn]} 
+            onPress={handleFollow}
+          >
+            {isFollowingLocal ? (
+              <UserCheck size={14} color="#A1A1A1" />
+            ) : (
+              <UserPlus size={14} color="#000" />
+            )}
+            <Text style={[styles.followBtnText, isFollowingLocal && styles.followingBtnText]}>
+              {isFollowingLocal ? "Following" : "Follow"}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {content ? <Text style={styles.content}>{content}</Text> : null}
 
       {hasImage && imageUrl && (
-        <Image 
-          source={{ uri: imageUrl }} 
-          style={styles.postImage} 
-          contentFit="cover" 
-          transition={200}
-        />
+        <Image source={{ uri: imageUrl }} style={styles.postImage} contentFit="cover" transition={200} />
       )}
 
       {hasAudio && audioUrl && (
-        <TouchableOpacity 
-          style={[styles.audioPlayer, isPlaying && styles.audioPlayerActive]} 
-          onPress={togglePlay}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={[styles.audioPlayer, isPlaying && styles.audioPlayerActive]} onPress={togglePlay} activeOpacity={0.7}>
           <View style={styles.playButton}>
-            {isPlaying ? (
-              <Pause size={14} color="black" fill="black" />
-            ) : (
-              <Play size={14} color="black" fill="black" />
-            )}
+            {isPlaying ? <Pause size={14} color="black" fill="black" /> : <Play size={14} color="black" fill="black" />}
           </View>
           <View style={styles.waveformContainer}>
              <View style={[styles.waveform, isPlaying && styles.waveformPlaying]} />
@@ -182,24 +204,15 @@ export default function FeedCard({
 
       <View style={styles.footer}>
         <View style={styles.interactionGroup}>
-          
           <TouchableOpacity style={styles.actionButton} onPress={handleCook}>
-            <Flame 
-              size={20} 
-              color={userAction === 'cooked' ? Colors.primary : "#A1A1A1"} 
-              fill={userAction === 'cooked' ? "rgba(204, 255, 0, 0.2)" : "transparent"} 
-            />
+            <Flame size={20} color={userAction === 'cooked' ? Colors.primary : "#A1A1A1"} fill={userAction === 'cooked' ? "rgba(204, 255, 0, 0.2)" : "transparent"} />
             <Text style={[styles.actionText, userAction === 'cooked' && { color: Colors.primary, fontWeight: 'bold' }]}>
               {cooks > 0 ? cooks : 'Cook'}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton} onPress={handleOffside}>
-            <FlagTriangleRight 
-              size={20} 
-              color={userAction === 'offside' ? "#FF3B30" : "#A1A1A1"} 
-              fill={userAction === 'offside' ? "rgba(255, 59, 48, 0.2)" : "transparent"} 
-            />
+            <FlagTriangleRight size={20} color={userAction === 'offside' ? "#FF3B30" : "#A1A1A1"} fill={userAction === 'offside' ? "rgba(255, 59, 48, 0.2)" : "transparent"} />
             <Text style={[styles.actionText, userAction === 'offside' && { color: '#FF3B30', fontWeight: 'bold' }]}>
               {offsides > 0 ? offsides : 'Offside'}
             </Text>
@@ -227,7 +240,12 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#1F1F1F', borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   
-  // 🚀 Updated Avatar Styles
+  // 🚀 New Follow Button Styles
+  followBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 4 },
+  followBtnText: { color: '#000', fontSize: 13, fontWeight: 'bold' },
+  followingBtn: { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  followingBtnText: { color: '#A1A1A1' },
+
   avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
   avatarPlaceholder: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#333', marginRight: 12, justifyContent: 'center', alignItems: 'center' },
   avatarInitials: { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
