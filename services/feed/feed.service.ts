@@ -13,8 +13,13 @@ export class FeedService {
   }
 
   // 2. Fetch the Feed
-  static async getFeed(limit = 20, offset = 0) {
-    const response = await api.get(`/feed/get-feed?limit=${limit}&offset=${offset}`);
+  // services/feed.service.ts
+  static async getFeed(limit = 20, offset = 0, club?: string) {
+    const url = club 
+      ? `/feed/get-feed?limit=${limit}&offset=${offset}&club=${encodeURIComponent(club)}`
+      : `/feed/get-feed?limit=${limit}&offset=${offset}`;
+
+    const response = await api.get(url);
     return response.data.data;
   }
 

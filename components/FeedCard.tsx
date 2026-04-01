@@ -2,13 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Vibration } from 'react-native';
 import { Image } from 'expo-image';
-import { Play, Pause, Flame, FlagTriangleRight, MessageSquare, Tv, UserPlus, UserCheck } from 'lucide-react-native'; // 🚀 Added User Icons
+import { Play, Pause, Flame, FlagTriangleRight, MessageSquare, Tv, UserPlus, UserCheck } from 'lucide-react-native'; 
 import { Audio } from 'expo-av'; 
 import { CLUBS } from "@/constants/clubs"; 
 import { Colors } from '@/constants/theme';
 import { useFeedQueries } from '@/services/feed/feed.queries';
-import { useAuthMutations } from '@/services/auth/auth.queries'; // 🚀 Brought in Follow logic
-import { useAuthStore } from '@/store/useAuthStore'; // 🚀 Brought in global state
+import { useAuthMutations } from '@/services/auth/auth.queries'; 
+import { useAuthStore } from '@/store/useAuthStore'; 
 
 type FeedCardProps = {
   username: string;
@@ -16,7 +16,7 @@ type FeedCardProps = {
   content: string;
   time: string;
   hasAudio?: boolean;
-  audioDuration?: string;
+  audioDuration?: string | number | null;
   audioUrl?: string | null;
   initialCooks?: number; 
   initialOffsides?: number;
@@ -35,13 +35,12 @@ type FeedCardProps = {
 export default function FeedCard({ 
   username, club, content, time, hasAudio, audioDuration, audioUrl,
   initialCooks = 0, initialOffsides = 0, commentsCount = 0, hasImage, imageUrl, onPress,
-  isComment = false, postId, avatar, authorId, showFollowButton =false, onAvatarPress
+  isComment = false, postId, avatar, authorId, showFollowButton = false, onAvatarPress
 }: FeedCardProps) {
   
   const clubData = CLUBS.find(c => c.name === club);
   const clubLogo = clubData?.logo;
   
-  // 🚀 Hooks
   const { interactMutation } = useFeedQueries();
   const { followMutation } = useAuthMutations();
   const { user } = useAuthStore();
@@ -49,14 +48,11 @@ export default function FeedCard({
   const [cooks, setCooks] = useState(initialCooks);
   const [offsides, setOffsides] = useState(initialOffsides);
   const [userAction, setUserAction] = useState<'cooked' | 'offside' | null>(null);
-
-  // 🚀 Local state for instant UI feedback on the Follow button
   const [isFollowingLocal, setIsFollowingLocal] = useState(false);
 
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // Check if the logged-in user wrote this post
   const isMyPost = user?.userId === authorId; 
 
   useEffect(() => {
@@ -82,7 +78,7 @@ export default function FeedCard({
         setSound(newSound);
         setIsPlaying(true);
 
-        newSound.setOnPlaybackStatusUpdate(async (status) => {
+        newSound.setOnPlaybackStatusUpdate(async (status: any) => {
           if (status.isLoaded && status.didJustFinish) {
             setIsPlaying(false);
             await newSound.pauseAsync();       
@@ -95,15 +91,10 @@ export default function FeedCard({
     }
   }
 
-  // 🚀 FOLLOW HANDLER
   const handleFollow = () => {
     if (!authorId) return;
     Vibration.vibrate(50);
-    
-    // Optimistic UI: instantly turn the button grey
     setIsFollowingLocal(!isFollowingLocal); 
-    
-    // Fire to backend silently
     followMutation.mutate(authorId);
   };
 
@@ -142,8 +133,6 @@ export default function FeedCard({
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9} disabled={!onPress}>
       <View style={styles.headerRow}>
-        
-        {/* 🚀 THE FIX: Wrapped the Avatar & Username in a TouchableOpacity */}
         <TouchableOpacity 
           style={{ flexDirection: 'row', flex: 1, alignItems: 'center' }} 
           onPress={onAvatarPress} 
@@ -173,7 +162,6 @@ export default function FeedCard({
           </View>
         </TouchableOpacity>
 
-        {/* 🚀 HIDDEN UNLESS showFollowButton IS TRUE */}
         {showFollowButton && !isMyPost && authorId && !isComment && (
           <TouchableOpacity style={[styles.followBtn, isFollowingLocal && styles.followingBtn]} onPress={handleFollow}>
             {isFollowingLocal ? <UserCheck size={14} color="#A1A1A1" /> : <UserPlus size={14} color="#000" />}
@@ -199,7 +187,7 @@ export default function FeedCard({
              <View style={[styles.waveform, isPlaying && styles.waveformPlaying]} />
           </View>
           <Text style={[styles.duration, isPlaying && { color: Colors.primary }]}>
-            {isPlaying ? "Playing..." : audioDuration || "0:00"}
+            {isPlaying ? "Playing..." : `${audioDuration}s`}
           </Text>
         </TouchableOpacity>
       )}
@@ -242,7 +230,6 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#1F1F1F', borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   
-  // 🚀 New Follow Button Styles
   followBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 4 },
   followBtnText: { color: '#000', fontSize: 13, fontWeight: 'bold' },
   followingBtn: { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },

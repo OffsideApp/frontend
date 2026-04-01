@@ -1,45 +1,41 @@
+// services/feed.queries.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FeedService} from './feed.service';
-import { CreatePostPayload } from '../../types/feed.types';
+import { FeedService } from './feed.service';
 import { Alert } from 'react-native';
 
-
-// We now accept an optional postId so we can fetch a specific thread!
-export const useFeedQueries = (postId?: string) => {
+// 🚀 Add club parameter here
+export const useFeedQueries = (postId?: string, club?: string) => {
   const queryClient = useQueryClient();
 
-  // 1. Hook to fetch the feed
   const feedQuery = useQuery({
-    queryKey: ['feed'],
-    queryFn: () => FeedService.getFeed(),
-    // Refetch every 10 seconds if the app is active
-      refetchInterval: 10000, 
-      // Ensure it doesn't refetch when the user is away from the app
-      refetchIntervalInBackground: false,
+    // 🚀 Cache them separately so swapping tabs is instant
+    queryKey: ['feed', club || 'all'], 
+    // 🚀 Pass the club to the service
+    queryFn: () => FeedService.getFeed(20, 0, club), 
+    refetchInterval: 10000, 
+    refetchIntervalInBackground: false,
   });
 
-  // 👇 NEW: Fetch a single post & its comments
   const postQuery = useQuery({
     queryKey: ['post', postId],
     queryFn: () => FeedService.getPost(postId!),
-    enabled: !!postId, // Only run this if a postId was passed in
+    enabled: !!postId, 
   });
 
   const createPostMutation = useMutation({
     mutationFn: FeedService.createPost,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['feed'] });
+      // 🚀 Invalidate BOTH feeds so the new post shows up everywhere
+      queryClient.invalidateQueries({ queryKey: ['feed'] }); 
     },
     onError: (error: any) => {
       Alert.alert("Error", error.response?.data?.message || "Failed to create post");
     }
   });
 
-  //  NEW: Create a comment mutation
   const createCommentMutation = useMutation({
     mutationFn: FeedService.createComment,
     onSuccess: () => {
-      // Refresh both the main feed AND the specific thread we are looking at
       queryClient.invalidateQueries({ queryKey: ['feed'] });
       queryClient.invalidateQueries({ queryKey: ['post', postId] });
     },
@@ -51,8 +47,6 @@ export const useFeedQueries = (postId?: string) => {
   const interactMutation = useMutation({
     mutationFn: (dto: { postId: string; action: 'COOK' | 'OFFSIDE' }) => 
       FeedService.interactWithPost(dto),
-    // We don't invalidate the feed immediately because we handle the UI optimistically 
-    // inside the FeedCard component for instant visual feedback!
   });
 
   return { feedQuery, postQuery, createPostMutation, createCommentMutation, interactMutation };
