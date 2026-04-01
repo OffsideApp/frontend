@@ -28,7 +28,6 @@ export default function PostDetailScreen() {
     );
   }
 
-  // 🚀 SAFETY CHECK: If the post was deleted or network drops
   if (postQuery.isError || !postQuery.data?.data) {
     return (
       <SafeAreaView style={styles.container}>
@@ -74,8 +73,14 @@ export default function PostDetailScreen() {
               imageUrl={post.imageUrl}
               commentsCount={post.comments?.length || 0}
               postId={post.id}
-              avatar={post.avatar}
+              
+              // 🚀 THE FIX: Pass the authorId and avatar correctly!
+              authorId={post.author.id} 
+              avatar={post.author.avatar}
               showFollowButton={true}
+              
+              // 🚀 Let users click the avatar to see the profile
+              onAvatarPress={() => navigation.navigate("UserProfile", { username: post.author.username })}
             />
             <View style={styles.divider} />
             <Text style={styles.repliesTitle}>Replies</Text>
@@ -95,7 +100,11 @@ export default function PostDetailScreen() {
               imageUrl={item.imageUrl}
               isComment={true}
               postId={item.id}
-              avatar={item.author?.avatar}
+              
+              // 🚀 Pass author details for replies too!
+              authorId={item.author.id}
+              avatar={item.author.avatar}
+              onAvatarPress={() => navigation.navigate("UserProfile", { username: item.author.username })}
             />
           </View>
         )}
@@ -124,6 +133,5 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 10 },
   repliesTitle: { color: '#A1A1A1', fontSize: 14, fontWeight: 'bold', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 },
   emptyText: { color: '#555', textAlign: 'center', marginTop: 40, fontSize: 16 },
-  
   fab: { position: 'absolute', bottom: 30, right: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#CCFF00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
 });

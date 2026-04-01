@@ -27,19 +27,28 @@ export default function UserProfileScreen() {
 
   // 🚀 Local State for the Follow Button
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
 
   // 🚀 Sync local state with the database when the profile loads
+ //
   useEffect(() => {
     if (displayUser) {
-      // Assuming your backend returns an `isFollowing` boolean. If not, it defaults to false.
       setIsFollowing(displayUser.isFollowing || false);
+      setFollowerCount(displayUser._count?.followers || 0); // 👈 Set initial number
     }
   }, [displayUser]);
 
-  const handleFollowToggle = () => {
+ const handleFollowToggle = () => {
     if (displayUser?.id) {
-      // Optimistic UI: Instantly change the button before the network finishes
-      setIsFollowing(!isFollowing);
+      // 🚀 THE TWITTER MAGIC: Do the math instantly!
+      if (isFollowing) {
+        setIsFollowing(false);
+        setFollowerCount(prev => prev - 1); // Instantly subtract 1
+      } else {
+        setIsFollowing(true);
+        setFollowerCount(prev => prev + 1); // Instantly add 1
+      }
+      // Send network request in the background
       followMutation.mutate(displayUser.id);
     }
   };
@@ -120,7 +129,7 @@ export default function UserProfileScreen() {
 
           <View style={styles.networkRow}>
             <View style={styles.networkItem}>
-              <Text style={styles.networkCount}>{displayUser?._count?.followers || 0}</Text>
+              <Text style={styles.networkCount}>{followerCount}</Text>
               <Text style={styles.networkLabel}>Followers</Text>
             </View>
             <View style={styles.networkItem}>
