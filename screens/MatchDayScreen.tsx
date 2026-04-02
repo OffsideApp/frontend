@@ -1,41 +1,91 @@
-// screens/MatchDayScreen.tsx
-import React from 'react';
-import { View, StyleSheet, FlatList, StatusBar } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, FlatList, StatusBar, KeyboardAvoidingView, Platform, TextInput, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRoute } from '@react-navigation/native';
+import { io, Socket } from 'socket.io-client'; // 🚀 IMPORT SOCKET.IO
+import { Mic, Send } from 'lucide-react-native';
 
 import MatchHeader from '../components/MatchHeader';
 import MatchChatCard from '../components/MatchChatCard';
-import ChatInput from '../components/ChatInput';
-
-// DUMMY DATA FOR UI TESTING
-const DUMMY_CHAT = [
-  { id: '1', username: 'Gooner4Life', club: 'ARS', message: 'If we concede now I am deleting the app.', time: '12:04', avatar: 'https://i.pravatar.cc/150?u=1', isMe: false },
-  { id: '2', username: 'ChelsBoy', club: 'CHE', message: 'Jackson is moving like a prime R9 right now what is going on???', time: '12:05', avatar: 'https://i.pravatar.cc/150?u=2', isMe: false },
-  { id: '3', username: 'Ozzy', club: 'ARS', message: 'Calm down bro, it was one pass.', time: '12:06', avatar: 'https://i.pravatar.cc/150?u=3', isMe: true }, // This will be green and on the right!
-  { id: '4', username: 'Gooner4Life', club: 'ARS', hasAudio: true, audioDuration: '12s', time: '12:07', avatar: 'https://i.pravatar.cc/150?u=1', isMe: false },
-];
+import { useAuthStore } from '../store/useAuthStore';
+import { Colors } from '../constants/theme';
 
 export default function MatchDayScreen() {
   const insets = useSafeAreaInsets();
+  const route = useRoute<any>();
+  const { user } = useAuthStore();
+  
+  // 🚀 Catch the match data passed from the Lobby
+  const match = route.params?.match; 
+
+  const [messages, setMessages] = useState<any[]>([]);
+  const [inputText, setInputText] = useState('');
+  const socketRef = useRef<Socket | null>(null);
+  const flatListRef = useRef<FlatList>(null);
+
+  useEffect(() => {
+    // 1. Connect to the NestJS WebSocket Gateway
+    // Make sure this URL matches your backend!
+    const wsUrl = process.env.EXPO_PUBLIC_WS_URL || 'http://localhost:3000';
+    socketRef.current = io(wsUrl, {
+      transports: ['websocket'],
+    });
+
+    // 2. Join the specific Match Room
+    socketRef.current.emit('joinMatch', { matchId: match.id });
+
+    // 3. Listen for incoming messages
+    socketRef.current.on('newMessage', (message) => {
+      setMessages((prev) => [message, ...prev]); // Add new message to the TOP of the array
+    });
+
+    return () => {
+      // Cleanup when user leaves the screen
+      socketRef.current?.emit('leaveMatch', { matchId: match.id });
+      socketRef.current?.disconnect();
+    };
+  }, [match.id]);
+
+  const handleSendMessage = () => {
+    if (!inputText.trim() || !socketRef.current) return;
+
+    const messagePayload = {
+      matchId: match.id,
+      userId: user?.userId,
+      username: user?.username,
+      club: user?.club,
+      avatar: user?.avatar,
+      message: inputText.trim(),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    // Broadcast to backend
+    socketRef.current.emit('sendMessage', messagePayload);
+    
+    setInputText(''); // Clear input
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" />
       
+      {/* 🚀 Dynamic Match Header */}
       <MatchHeader 
-        homeTeam="Arsenal"
-        awayTeam="Chelsea"
-        homeScore={2}
-        awayScore={1}
-        homeLogo="https://media.api-sports.io/football/teams/42.png" // Arsenal
-        awayLogo="https://media.api-sports.io/football/teams/49.png" // Chelsea
-        matchTime="67'"
+        homeTeam={match.homeTeam}
+        awayTeam={match.awayTeam}
+        homeScore={match.homeScore}
+        awayScore={match.awayScore}
+        homeLogo={match.homeLogo}
+        awayLogo={match.awayLogo}
+        matchTime={match.status === 'FT' ? 'FT' : match.matchTime || 'VS'}
       />
 
-      {/* The Chat Trench */}
+      {/* The Live Chat Trench */}
       <FlatList
-        data={DUMMY_CHAT}
-        keyExtractor={item => item.id}
+        ref={flatListRef}
+        data={messages}
+        keyExtractor={(item, index) => item.id || index.toString()}
+        inverted // 🚀 THIS IS CRUCIAL: Makes the list start from the bottom!
         renderItem={({ item }) => (
           <MatchChatCard 
             username={item.username}
@@ -43,16 +93,43 @@ export default function MatchDayScreen() {
             message={item.message}
             time={item.time}
             avatar={item.avatar}
-            hasAudio={item.hasAudio}
-            audioDuration={item.audioDuration}
-            isMe={item.isMe}
+            isMe={item.userId === user?.userId} // Highlights user's own messages
           />
         )}
         contentContainerStyle={styles.chatList}
-        inverted={false} // Set to true later when we do WebSockets so new messages push from the bottom
+        showsVerticalScrollIndicator={false}
       />
 
-      <ChatInput />
+      {/* 🚀 Integrated Input Footer */}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <View style={styles.inputBox}>
+            <TextInput 
+              style={styles.input}
+              placeholder="Talk your shit..."
+              placeholderTextColor="#666"
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={200}
+            />
+            <TouchableOpacity style={styles.micBtn}>
+              <Mic color="#FFF" size={20} />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity 
+            style={[styles.sendBtn, inputText.length > 0 && { backgroundColor: Colors.primary }]}
+            disabled={inputText.length === 0}
+            onPress={handleSendMessage}
+          >
+            <Send color={inputText.length > 0 ? "#000" : "#666"} size={20} />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -60,4 +137,11 @@ export default function MatchDayScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0D0D0D' },
   chatList: { paddingVertical: 16 },
+  
+  // Input Styles
+  inputContainer: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 12, backgroundColor: '#0D0D0D', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+  inputBox: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1A1A', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, minHeight: 44, maxHeight: 100 },
+  input: { flex: 1, color: '#FFF', fontSize: 15, paddingTop: 8, paddingBottom: 8 },
+  micBtn: { padding: 4, marginLeft: 8 },
+  sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#1A1A1A', justifyContent: 'center', alignItems: 'center', marginLeft: 12, marginBottom: 2 },
 });
