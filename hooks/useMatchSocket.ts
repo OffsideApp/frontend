@@ -10,12 +10,21 @@ export const useMatchSocket = (initialMatch: any, user: any) => {
   useEffect(() => {
     if (!initialMatch?.id) return;
 
-    const wsUrl = process.env.EXPO_PUBLIC_API_URL|| 'http://localhost:3000';
-    socketRef.current = io(wsUrl, { transports: ['websocket'] });
+    // 🚀 REMINDER: If on Android Emulator, this MUST be http://10.0.2.2:3000
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+
+    const wsBaseUrl = apiUrl.split('/api')[0];
+
+    socketRef.current = io(wsBaseUrl, { transports: ['websocket'] });
+
+    // 🚀 NEW DEBUG LOGS: Watch your terminal when you enter the screen!
+    socketRef.current.on('connect', () => console.log('🟢 WS CONNECTED TO SERVER!'));
+    socketRef.current.on('connect_error', (err) => console.error('🔴 WS ERROR:', err.message));
 
     socketRef.current.emit('joinMatch', { matchId: initialMatch.id });
 
     socketRef.current.on('newMessage', (message) => {
+      console.log("📨 Message received from server!");
       setMessages((prev) => [message, ...prev]); 
     });
 

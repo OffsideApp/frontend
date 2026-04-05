@@ -1,6 +1,5 @@
-// components/ChatInput.tsx
 import React, { useState, useRef } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Text, Alert } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Text } from 'react-native';
 import { Mic, Send, Trash2, Square } from 'lucide-react-native';
 import { Audio } from 'expo-av';
 import { Colors } from '../constants/theme';
@@ -11,20 +10,25 @@ type ChatInputProps = {
 
 export default function ChatInput({ onSend }: ChatInputProps) {
   const [text, setText] = useState('');
-  
-  // Audio State
-  const [recordingState, setRecordingState] = useState<Audio.Recording | null>(null);
-  const recordingRef = useRef<Audio.Recording | null>(null); // 🚀 The Safety Net for fast taps
+  const [isRecording, setIsRecording] = useState(false);
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(0);
 
-  // 🎙️ START RECORDING
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const isSettingUp = useRef(false); // 🔒 Lock to prevent overlapping startRecording calls
+  const shouldStop = useRef(false);  // 🚩 Flag: did the user release before setup finished?
+
   const startRecording = async () => {
+    // 🔒 If already setting up or already recording, bail out completely
+    if (isSettingUp.current || recordingRef.current) return;
+
+    isSettingUp.current = true;
+    shouldStop.current = false;
+
     try {
-      // 1. Strictly check permissions first!
       const permission = await Audio.requestPermissionsAsync();
       if (permission.status !== 'granted') {
-        Alert.alert("Permission Denied", "Please allow microphone access to send voice notes.");
+        isSettingUp.current = false;
         return;
       }
 
@@ -33,89 +37,109 @@ export default function ChatInput({ onSend }: ChatInputProps) {
         playsInSilentModeIOS: true,
       });
 
-      // 2. Start the recording
       const { recording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
-      
-      // 3. Save it to both state AND the ref
+
+      // 🚩 User already lifted finger before we finished setup — stop immediately
+      if (shouldStop.current) {
+        await recording.stopAndUnloadAsync().catch(() => {});
+        isSettingUp.current = false;
+        return;
+      }
+
       recordingRef.current = recording;
-      setRecordingState(recording);
-      
+      setIsRecording(true);
     } catch (err) {
       console.error('Failed to start recording', err);
+      recordingRef.current = null;
+      setIsRecording(false);
+    } finally {
+      isSettingUp.current = false;
     }
   };
 
-  // 🛑 STOP RECORDING
   const stopRecording = async () => {
-    // 🚀 Check the ref instead of state to avoid the Quick-Tap bug!
+    // 🚩 If still setting up, just flag that we want to stop — startRecording will handle it
+    if (isSettingUp.current) {
+      shouldStop.current = true;
+      return;
+    }
+
     const activeRecording = recordingRef.current;
-    if (!activeRecording) return; 
+    if (!activeRecording) return;
+
+    // Clear the ref immediately so nothing else can touch this instance
+    recordingRef.current = null;
+    setIsRecording(false);
 
     try {
-      await activeRecording.stopAndUnloadAsync();
-      const uri = activeRecording.getURI();
       const status = await activeRecording.getStatusAsync();
-      
-      if (uri) {
+      await activeRecording.stopAndUnloadAsync();
+
+      const uri = activeRecording.getURI();
+      const recordedDuration = Math.floor((status.durationMillis ?? 0) / 1000);
+
+      // Ignore taps shorter than 1 second — accidental presses
+      if (uri && recordedDuration >= 1) {
         setAudioUri(uri);
+        setDuration(recordedDuration);
       }
-      
-      // Convert milliseconds to seconds safely
-      // RecordingStatus inherently has durationMillis, no need to check isLoaded!
-      setDuration(Math.floor(status.durationMillis / 1000));
-      // Clear both the ref and the state
-      recordingRef.current = null;
-      setRecordingState(null);
-      
     } catch (err) {
       console.error('Failed to stop recording', err);
-      // Failsafe cleanup
-      recordingRef.current = null;
-      setRecordingState(null);
+      // Salvage whatever URI we can
+      const uri = activeRecording.getURI();
+      if (uri) {
+        setAudioUri(uri);
+        setDuration(1);
+      }
     }
   };
 
-  // 🚀 SEND HANDLER
+  const discardAudio = () => {
+    setAudioUri(null);
+    setDuration(0);
+  };
+
   const handleSend = () => {
-    if (text.trim().length === 0 && !audioUri) return;
-
-    // Pass data up to MatchDayScreen
+    if (!text.trim() && !audioUri) return;
     onSend(text.trim(), audioUri || undefined, duration);
-
-    // Clear the input after sending
     setText('');
     setAudioUri(null);
     setDuration(0);
   };
 
+  const canSend = text.length > 0 || !!audioUri;
+
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <View style={styles.container}>
         <View style={styles.inputBox}>
-          
-          {/* Conditional UI: Text Input vs Audio Ready vs Recording */}
-          {audioUri ? (
-            // State 1: Audio Recorded & Ready to Send
+
+          {/* State 1: Audio is recorded and ready to send */}
+          {audioUri && !isRecording && (
             <View style={styles.audioReadyContainer}>
-              <TouchableOpacity onPress={() => setAudioUri(null)} style={styles.trashBtn}>
+              <TouchableOpacity onPress={discardAudio} style={styles.trashBtn}>
                 <Trash2 color="#FF3B30" size={18} />
               </TouchableOpacity>
               <Text style={styles.audioReadyText}>Audio Rant Ready ({duration}s)</Text>
             </View>
-          ) : recordingState ? (
-            // State 2: Actively Recording
+          )}
+
+          {/* State 2: Currently recording */}
+          {isRecording && (
             <View style={styles.audioReadyContainer}>
               <View style={styles.recordingDot} />
               <Text style={styles.recordingText}>Recording...</Text>
             </View>
-          ) : (
-            // State 3: Default Text Input
-            <TextInput 
+          )}
+
+          {/* State 3: Normal text input */}
+          {!audioUri && !isRecording && (
+            <TextInput
               style={styles.input}
               placeholder="Talk your shit..."
               placeholderTextColor="#666"
@@ -126,29 +150,29 @@ export default function ChatInput({ onSend }: ChatInputProps) {
             />
           )}
 
-          {/* Mic / Stop Recording Button */}
+          {/* Mic button — only show when no audio is ready and not typing */}
           {!audioUri && text.length === 0 && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.micBtn}
-              onPressIn={startRecording} 
-              onPressOut={stopRecording} 
+              onPressIn={startRecording}
+              onPressOut={stopRecording}
+              activeOpacity={1}
             >
-              {recordingState ? (
-                <Square color="#FF3B30" size={20} /> 
-              ) : (
-                <Mic color="#FFF" size={20} />
-              )}
+              {isRecording
+                ? <Square color="#FF3B30" size={20} />
+                : <Mic color="#FFF" size={20} />
+              }
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Send Button */}
-        <TouchableOpacity 
-          style={[styles.sendBtn, (text.length > 0 || audioUri) && { backgroundColor: Colors.primary }]}
-          disabled={text.length === 0 && !audioUri}
+        {/* Send button */}
+        <TouchableOpacity
+          style={[styles.sendBtn, canSend && { backgroundColor: Colors.primary }]}
+          disabled={!canSend}
           onPress={handleSend}
         >
-          <Send color={(text.length > 0 || audioUri) ? "#000" : "#666"} size={20} />
+          <Send color={canSend ? '#000' : '#666'} size={20} />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -161,8 +185,6 @@ const styles = StyleSheet.create({
   input: { flex: 1, color: '#FFF', fontSize: 15, paddingTop: 8, paddingBottom: 8 },
   micBtn: { padding: 8, marginLeft: 4 },
   sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#1A1A1A', justifyContent: 'center', alignItems: 'center', marginLeft: 12, marginBottom: 2 },
-  
-  // Audio UI Styles
   audioReadyContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', height: 28 },
   trashBtn: { padding: 4, marginRight: 8, backgroundColor: 'rgba(255, 59, 48, 0.1)', borderRadius: 12 },
   audioReadyText: { color: Colors.primary, fontSize: 14, fontWeight: '600' },

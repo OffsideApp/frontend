@@ -71,18 +71,18 @@ export default function MatchHeader({
 const styles = StyleSheet.create({
   container: { backgroundColor: '#1A1A1A', paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10, marginBottom: 16 },
-  
-  // 🚀 Updated Styles for the Back Button
   backBtnContainer: { flexDirection: 'row', alignItems: 'center', width: 65 }, 
   backBtnText: { color: '#FFF', fontSize: 14, fontWeight: 'bold', marginLeft: 2 },
-  
   leagueText: { color: '#A1A1A1', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 },
   scoreBoard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   teamBox: { flex: 1, alignItems: 'center' },
   logo: { width: 48, height: 48, marginBottom: 8 },
   teamName: { color: '#FFF', fontSize: 14, fontWeight: '600', textAlign: 'center' },
-  centerBox: { alignItems: 'center', paddingHorizontal: 20 },
-  scoreText: { color: Colors.primary, fontSize: 32, fontWeight: '900', fontStyle: 'italic', marginBottom: 4 },
+  
+  // 🚀 THE FIX: Give the center box a minimum width and tell it not to shrink!
+  centerBox: { alignItems: 'center', paddingHorizontal: 10, minWidth: 90, flexShrink: 0 },
+  scoreText: { color: Colors.primary, fontSize: 32, fontWeight: '900', fontStyle: 'italic', marginBottom: 4, textAlign: 'center' },
+  
   timeBadge: { backgroundColor: 'rgba(255, 59, 48, 0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255, 59, 48, 0.3)' },
   timeText: { color: '#FF3B30', fontSize: 12, fontWeight: 'bold' },
 });
