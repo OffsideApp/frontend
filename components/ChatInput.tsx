@@ -1,6 +1,6 @@
 // components/ChatInput.tsx
-import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Text } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Text, Alert } from 'react-native';
 import { Mic, Send, Trash2, Square } from 'lucide-react-native';
 import { Audio } from 'expo-av';
 import { Colors } from '../constants/theme';
@@ -13,23 +13,35 @@ export default function ChatInput({ onSend }: ChatInputProps) {
   const [text, setText] = useState('');
   
   // Audio State
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [recordingState, setRecordingState] = useState<Audio.Recording | null>(null);
+  const recordingRef = useRef<Audio.Recording | null>(null); // 🚀 The Safety Net for fast taps
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(0);
 
   // 🎙️ START RECORDING
   const startRecording = async () => {
     try {
-      await Audio.requestPermissionsAsync();
+      // 1. Strictly check permissions first!
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert("Permission Denied", "Please allow microphone access to send voice notes.");
+        return;
+      }
+
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
 
+      // 2. Start the recording
       const { recording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
-      setRecording(recording);
+      
+      // 3. Save it to both state AND the ref
+      recordingRef.current = recording;
+      setRecordingState(recording);
+      
     } catch (err) {
       console.error('Failed to start recording', err);
     }
@@ -37,20 +49,31 @@ export default function ChatInput({ onSend }: ChatInputProps) {
 
   // 🛑 STOP RECORDING
   const stopRecording = async () => {
-    if (!recording) return;
+    // 🚀 Check the ref instead of state to avoid the Quick-Tap bug!
+    const activeRecording = recordingRef.current;
+    if (!activeRecording) return; 
+
     try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      const status = await recording.getStatusAsync();
+      await activeRecording.stopAndUnloadAsync();
+      const uri = activeRecording.getURI();
+      const status = await activeRecording.getStatusAsync();
       
-      setAudioUri(uri);
-      // Convert milliseconds to seconds
-      if (status.isLoaded) {
-        setDuration(Math.floor(status.durationMillis / 1000));
+      if (uri) {
+        setAudioUri(uri);
       }
-      setRecording(null);
+      
+      // Convert milliseconds to seconds safely
+      // RecordingStatus inherently has durationMillis, no need to check isLoaded!
+      setDuration(Math.floor(status.durationMillis / 1000));
+      // Clear both the ref and the state
+      recordingRef.current = null;
+      setRecordingState(null);
+      
     } catch (err) {
       console.error('Failed to stop recording', err);
+      // Failsafe cleanup
+      recordingRef.current = null;
+      setRecordingState(null);
     }
   };
 
@@ -84,7 +107,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
               </TouchableOpacity>
               <Text style={styles.audioReadyText}>Audio Rant Ready ({duration}s)</Text>
             </View>
-          ) : recording ? (
+          ) : recordingState ? (
             // State 2: Actively Recording
             <View style={styles.audioReadyContainer}>
               <View style={styles.recordingDot} />
@@ -107,11 +130,11 @@ export default function ChatInput({ onSend }: ChatInputProps) {
           {!audioUri && text.length === 0 && (
             <TouchableOpacity 
               style={styles.micBtn}
-              onPressIn={startRecording} // Press and hold (or tap) to start
-              onPressOut={stopRecording} // Release to stop
+              onPressIn={startRecording} 
+              onPressOut={stopRecording} 
             >
-              {recording ? (
-                <Square color="#FF3B30" size={20} fill="#FF3B30" />
+              {recordingState ? (
+                <Square color="#FF3B30" size={20} /> 
               ) : (
                 <Mic color="#FFF" size={20} />
               )}

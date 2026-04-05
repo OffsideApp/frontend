@@ -1,14 +1,13 @@
-/* eslint-disable react-hooks/rules-of-hooks */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, StatusBar, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { io, Socket } from 'socket.io-client';
 
 import MatchHeader from '../components/MatchHeader';
 import MatchChatCard from '../components/MatchChatCard';
-import ChatInput from '../components/ChatInput'; // 🚀 IMPORT YOUR COMPONENT
+import ChatInput from '../components/ChatInput'; 
 import { useAuthStore } from '../store/useAuthStore';
+import { useMatchSocket } from '../hooks/useMatchSocket'; // 🚀 IMPORT YOUR NEW HOOK
 import { Colors } from '../constants/theme';
 
 export default function MatchDayScreen() {
@@ -17,9 +16,15 @@ export default function MatchDayScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuthStore();
   
-  const match = route.params?.match; 
+  const initialMatch = route.params?.match; 
 
-  if (!match) {
+  // 🚀 THE MAGIC: All WebSocket logic is perfectly abstracted away!
+  const { currentMatch, messages, sendMessage } = useMatchSocket(initialMatch, user);
+  
+  const flatListRef = useRef<FlatList>(null);
+
+  // Safety Net
+  if (!currentMatch) {
     return (
       <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
         <StatusBar barStyle="light-content" />
@@ -31,61 +36,17 @@ export default function MatchDayScreen() {
     );
   }
 
-  const [messages, setMessages] = useState<any[]>([]);
-  const socketRef = useRef<Socket | null>(null);
-  const flatListRef = useRef<FlatList>(null);
-
-  useEffect(() => {
-    const wsUrl = process.env.EXPO_PUBLIC_WS_URL || 'http://localhost:3000';
-    socketRef.current = io(wsUrl, { transports: ['websocket'] });
-
-    socketRef.current.emit('joinMatch', { matchId: match.id });
-
-    socketRef.current.on('newMessage', (message) => {
-      setMessages((prev) => [message, ...prev]); 
-    });
-
-    return () => {
-      socketRef.current?.emit('leaveMatch', { matchId: match.id });
-      socketRef.current?.disconnect();
-    };
-  }, [match.id]);
-
-  // 🚀 THE NEW SEND HANDLER
-  const handleSendMessage = async (text: string, audioUri?: string, audioDuration?: number) => {
-    if (!socketRef.current) return;
-
-    // TODO FOR PRODUCTION: If audioUri exists, you will upload it to Cloudinary here first!
-    // For now, we are passing the local URI so you can test the UI instantly.
-    
-    const messagePayload = {
-      matchId: match.id,
-      userId: user?.userId,
-      username: user?.username || "Unknown Fan",
-      club: user?.club || "Neutral",
-      avatar: user?.avatar,
-      message: text || undefined,
-      hasAudio: !!audioUri,
-      audioUrl: audioUri, 
-      audioDuration: audioDuration ? `${audioDuration}s` : undefined,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    socketRef.current.emit('sendMessage', messagePayload);
-  };
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" />
-      
       <MatchHeader 
-        homeTeam={match.homeTeam}
-        awayTeam={match.awayTeam}
-        homeScore={match.homeScore}
-        awayScore={match.awayScore}
-        homeLogo={match.homeLogo}
-        awayLogo={match.awayLogo}
-        matchTime={match.status === 'FT' ? 'FT' : match.matchTime || 'VS'}
+        homeTeam={currentMatch.homeTeam}
+        awayTeam={currentMatch.awayTeam}
+        homeScore={currentMatch.homeScore}
+        awayScore={currentMatch.awayScore}
+        homeLogo={currentMatch.homeLogo}
+        awayLogo={currentMatch.awayLogo}
+        matchTime={currentMatch.status === 'FT' ? 'FT' : currentMatch.matchTime || 'VS'}
       />
 
       <FlatList
@@ -109,9 +70,8 @@ export default function MatchDayScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* 🚀 PLUG IN THE CHAT INPUT HERE */}
       <View style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
-        <ChatInput onSend={handleSendMessage} />
+        <ChatInput onSend={sendMessage} />
       </View>
     </View>
   );
