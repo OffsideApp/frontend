@@ -19,17 +19,27 @@ type MatchHeaderProps = {
 export default function MatchHeader({ 
   homeTeam, awayTeam, homeScore, awayScore, homeLogo, awayLogo, matchTime 
 }: MatchHeaderProps) {
-  const navigation = useNavigation();
+  // 🚀 Added <any> to keep TypeScript happy when passing string routes!
+  const navigation = useNavigation<any>();
 
   return (
     <View style={styles.container}>
       {/* Top Row: Back Button & League */}
       <View style={styles.topRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        
+        {/* 🚀 THE FIX: Wired to "MatchLobby" and added the "Lobby" text label */}
+        <TouchableOpacity 
+          onPress={() => navigation.navigate("MatchLobby")} 
+          style={styles.backBtnContainer}
+        >
           <ChevronLeft color="#FFF" size={24} />
+          <Text style={styles.backBtnText}>Lobby</Text>
         </TouchableOpacity>
+
         <Text style={styles.leagueText}>Premier League</Text>
-        <View style={{ width: 24 }} /> {/* Spacer to center the league text */}
+        
+        {/* Spacer to perfectly center the league text (matches the width of the back button) */}
+        <View style={{ width: 65 }} /> 
       </View>
 
       {/* Scoreboard */}
@@ -61,7 +71,11 @@ export default function MatchHeader({
 const styles = StyleSheet.create({
   container: { backgroundColor: '#1A1A1A', paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10, marginBottom: 16 },
-  backBtn: { padding: 4 },
+  
+  // 🚀 Updated Styles for the Back Button
+  backBtnContainer: { flexDirection: 'row', alignItems: 'center', width: 65 }, 
+  backBtnText: { color: '#FFF', fontSize: 14, fontWeight: 'bold', marginLeft: 2 },
+  
   leagueText: { color: '#A1A1A1', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 },
   scoreBoard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   teamBox: { flex: 1, alignItems: 'center' },

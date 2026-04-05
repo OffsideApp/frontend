@@ -5,16 +5,16 @@ import { NavigationContainer, DarkTheme } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
-import { Ionicons } from "@expo/vector-icons"; 
+import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ActivityIndicator, View, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-// Import your Zustand store (adjust path if necessary)
+// Import your Zustand store
 import { useAuthStore } from "./store/useAuthStore";
 
-// Import your new Screens
+// Import your Screens
 import OnboardingScreen from "./screens/OnboardingScreen";
 import LoginScreen from "./screens/LoginScreen";
 import SignupScreen from "./screens/SignupScreen";
@@ -25,22 +25,37 @@ import ResetPasswordScreen from "./screens/ResetPasswordScreen";
 import SelectClubScreen from "./screens/SelectClubScreen";
 import SetProfileScreen from "./screens/SelectProfileScreen";
 import VerifyScreen from "./screens/VerifyScreen";
-import MatchdayScreen from "./screens/MatchDayScreen";
 import CreatePostScreen from "./screens/CreatePostScreen";
 import PostDetailScreen from "./screens/PostDetailScreen";
 import CreateCommentScreen from "./screens/CreateCommentScreen";
 import UserProfileScreen from "./screens/UserProfileScreen";
+import MatchLobbyScreen from "./screens/MatchLobbyScreen";
+import MatchDayScreen from "./screens/MatchDayScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+const MatchStack = createNativeStackNavigator();
+
+// 🚀 1. THE NESTED MATCH STACK
+export function MatchStackScreen() {
+  return (
+    <MatchStack.Navigator screenOptions={{ headerShown: false }}>
+      {/* The Lobby is the FIRST thing they see when they click the tab */}
+      <MatchStack.Screen name="MatchLobby" component={MatchLobbyScreen} />
+      
+      {/* The Chat Trench is the second thing they see */}
+      <MatchStack.Screen name="MatchDay" component={MatchDayScreen} />
+    </MatchStack.Navigator>
+  );
+}
 
 // --- CUSTOM DARK THEME ---
 const AppTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    background: '#0D0D0D', // Kills the white flash on modal transitions
-    card: '#0D0D0D',       // Kills the white gap under the bottom tabs
+    background: "#0D0D0D", 
+    card: "#0D0D0D", 
   },
 };
 
@@ -53,18 +68,18 @@ function HomeTabs() {
         tabBarActiveTintColor: "#CCFF00", // Neon Green Active State
         tabBarInactiveTintColor: "#555555", // Muted Gray Inactive State
         tabBarStyle: {
-          backgroundColor: '#0D0D0D', 
+          backgroundColor: "#0D0D0D",
           borderTopWidth: 1,
-          borderTopColor: 'rgba(255,255,255,0.05)', 
+          borderTopColor: "rgba(255,255,255,0.05)",
           paddingTop: 8,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 8, 
-          height: Platform.OS === 'ios' ? 88 : 68,
-          elevation: 0, 
-          shadowOpacity: 0, 
+          paddingBottom: Platform.OS === "ios" ? 28 : 8,
+          height: Platform.OS === "ios" ? 88 : 68,
+          elevation: 0,
+          shadowOpacity: 0,
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '600',
+          fontWeight: "600",
           marginTop: -4,
         },
         tabBarIcon: ({ color, focused }) => {
@@ -81,7 +96,10 @@ function HomeTabs() {
       })}
     >
       <Tab.Screen name="Feed" component={FeedScreen} />
-      <Tab.Screen name="Matchday" component={MatchdayScreen} />
+      
+      {/* 🚀 2. PLUG THE STACK INTO THE TAB HERE */}
+      <Tab.Screen name="Matchday" component={MatchStackScreen} />
+      
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -89,7 +107,6 @@ function HomeTabs() {
 
 // --- ROOT NAVIGATION LOGIC ---
 function NavigationContent() {
-  // Pull authentication state directly from Zustand
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
 
@@ -107,17 +124,28 @@ function NavigationContent() {
 
   if (isFirstLaunch === null) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: '#0D0D0D' }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#0D0D0D",
+        }}
+      >
         <ActivityIndicator size="large" color="#CCFF00" />
       </View>
     );
   }
 
   return (
-    // Pass the custom Dark Theme here
     <NavigationContainer theme={AppTheme}>
       <StatusBar style="light" />
-      <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0D0D0D' } }}>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: "#0D0D0D" },
+        }}
+      >
         {isAuthenticated ? (
           // USER IS LOGGED IN -> Show Main App Flow
           <>
@@ -132,22 +160,19 @@ function NavigationContent() {
                 <Stack.Screen
                   name="CreatePost"
                   component={CreatePostScreen}
-                  options={{ presentation: "modal" }} // Makes it slide up!
+                  options={{ presentation: "modal" }} 
                 />
-                <Stack.Screen
-                  name="PostDetail"
-                  component={PostDetailScreen}
-                />
+                <Stack.Screen name="PostDetail" component={PostDetailScreen} />
                 <Stack.Screen
                   name="CreateComment"
-                  component={CreateCommentScreen} // 👈 We will make this next!
-                  options={{ presentation: "modal" }} 
+                  component={CreateCommentScreen} 
+                  options={{ presentation: "modal" }}
                 />
                 <Stack.Screen
                   name="UserProfile"
-                  component={UserProfileScreen} // 👈 We will make this next!
-                  
+                  component={UserProfileScreen} 
                 />
+                {/* 🚀 3. Removed MatchLobby from here since it's now safely inside MatchStackScreen! */}
               </>
             )}
           </>
@@ -182,7 +207,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
-        <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0D0D0D' }}>
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0D0D0D" }}>
           <NavigationContent />
         </GestureHandlerRootView>
       </SafeAreaProvider>
